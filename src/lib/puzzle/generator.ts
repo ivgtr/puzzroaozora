@@ -1,49 +1,49 @@
 import crypto from "node:crypto";
-import { getBookContent, listBooks } from "@/lib/aozora/client";
+import { getBookContent } from "@/lib/aozora/client";
 import { normalizeAozoraText, pickPassageByLength } from "@/lib/aozora/cleaner";
 import { createAnswerToken } from "@/lib/puzzle/answerToken";
 import { DIFFICULTY_CONFIG } from "@/lib/puzzle/difficulty";
+import { decryptPassage } from "@/lib/puzzle/passageCrypto";
 import { buildSeededRandom, shuffleWithRandom } from "@/lib/puzzle/random";
 import { createPuzzleSegments } from "@/lib/puzzle/segmenter";
 import type { Difficulty, PuzzleData } from "@/types/puzzle";
 
-async function resolveBookId(bookId: string | undefined, random: () => number): Promise<string> {
-  if (bookId) {
-    return bookId;
-  }
-
-  const books = await listBooks({ limit: 30, offset: 0 });
-  if (books.books.length === 0) {
-    throw new Error("作品一覧を取得できませんでした");
-  }
-
-  const randomIndex = Math.floor(random() * books.books.length);
-  return books.books[randomIndex].id;
-}
-
 export async function generatePuzzle(options: {
-  bookId?: string;
+  bookId: string;
   difficulty: Difficulty;
   seed?: string;
+  title?: string;
+  author?: string;
+  encryptedPassage?: string;
 }): Promise<PuzzleData> {
   const seed = options.seed ?? crypto.randomUUID();
   const random = buildSeededRandom(seed);
   const difficultyConfig = DIFFICULTY_CONFIG[options.difficulty];
 
-  const bookId = await resolveBookId(options.bookId, random);
-  const content = await getBookContent(bookId);
+  let passage: string;
+  let title: string;
+  let author: string;
 
-  const normalizedText = normalizeAozoraText(content.text);
-  const passage = pickPassageByLength(
-    normalizedText,
-    difficultyConfig.textMin,
-    difficultyConfig.textMax,
-    random,
-  );
+  if (options.encryptedPassage) {
+    passage = decryptPassage(options.encryptedPassage);
+    title = options.title ?? "";
+    author = options.author ?? "";
+  } else {
+    const content = await getBookContent(options.bookId);
+    const normalizedText = normalizeAozoraText(content.text);
+    passage = pickPassageByLength(
+      normalizedText,
+      difficultyConfig.textMin,
+      difficultyConfig.textMax,
+      random,
+    );
+    title = content.title;
+    author = content.author;
+  }
 
   const segments = createPuzzleSegments(passage, options.difficulty, random);
   if (segments.length < 2) {
-    throw new Error("パズル生成に必要な文量が不足しています");
+    throw new Error("\u30D1\u30BA\u30EB\u751F\u6210\u306B\u5FC5\u8981\u306A\u6587\u91CF\u304C\u4E0D\u8DB3\u3057\u3066\u3044\u307E\u3059");
   }
 
   const fixedSegmentId = difficultyConfig.showFixedFirstSegment
@@ -66,9 +66,9 @@ export async function generatePuzzle(options: {
 
   return {
     id: puzzleId,
-    bookId,
-    title: content.title,
-    author: content.author,
+    bookId: options.bookId,
+    title,
+    author,
     originalText: passage,
     segments,
     shuffledSegments,

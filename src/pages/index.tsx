@@ -1,18 +1,30 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { FIXED_WORKS } from "@/data/fixedBooks";
+import {
+  type StoredBook,
+  deleteBook,
+  getAllBooks,
+  pickRandomPassage,
+  putBook,
+  toBookSummary,
+} from "@/lib/store/bookStore";
 import type { ApiResponse, BookSummary, Difficulty, PuzzleData, ResultData } from "@/types/puzzle";
 
-type BooksListData = {
-  books: BookSummary[];
-  total: number;
-  hasMore: boolean;
-  source: "fixed" | "api" | "fallback";
+const DIFFICULTY_LABEL: Record<Difficulty, string> = {
+  easy: "\u5165\u9580",
+  normal: "\u901A\u5E38",
+  hard: "\u9054\u4EBA",
 };
 
-const DIFFICULTY_LABEL: Record<Difficulty, string> = {
-  easy: "入門",
-  normal: "通常",
-  hard: "達人",
-};
+const FIXED_BOOK_SUMMARIES: BookSummary[] = FIXED_WORKS.map((w) => w.book);
+
+const AOZORA_URL_RE = /\/cards\/\d+\/(?:card|files\/)(\d+)[_.]/;
+
+function parseAozoraUrl(url: string): string | null {
+  const match = AOZORA_URL_RE.exec(url);
+  if (!match?.[1]) return null;
+  return match[1].padStart(6, "0");
+}
 
 function formatSeconds(totalSeconds: number): string {
   const min = Math.floor(totalSeconds / 60)
@@ -26,34 +38,35 @@ function formatSeconds(totalSeconds: number): string {
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, {
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     ...init,
   });
 
-  const json = (await response.json()) as T;
-  if (!response.ok) {
+  let json: T;
+  try {
+    json = (await response.json()) as T;
+  } catch {
     throw new Error(`HTTP ${response.status}`);
   }
-
   return json;
 }
 
 function normalizeErrorMessage(error: unknown, fallback: string): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
+  if (error instanceof Error) return error.message;
   return fallback;
+}
+
+function isFixedBook(bookId: string): boolean {
+  return bookId.startsWith("fixed:");
 }
 
 export default function Home() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [difficulty, setDifficulty] = useState<Difficulty>("normal");
-  const [books, setBooks] = useState<BookSummary[]>([]);
-  const [booksSource, setBooksSource] = useState<"fixed" | "api" | "fallback">("fixed");
-  const [selectedBookId, setSelectedBookId] = useState<string>("");
-  const [bookQuery, setBookQuery] = useState("");
+  const [userBooks, setUserBooks] = useState<StoredBook[]>([]);
+  const [selectedBookId, setSelectedBookId] = useState<string>(
+    FIXED_BOOK_SUMMARIES[0]?.id ?? "",
+  );
 
   const [puzzle, setPuzzle] = useState<PuzzleData | null>(null);
   const [answerIds, setAnswerIds] = useState<string[]>([]);
@@ -61,17 +74,39 @@ export default function Home() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [result, setResult] = useState<ResultData | null>(null);
 
-  const [isLoadingBooks, setIsLoadingBooks] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string>("");
+  const [isImporting, setIsImporting] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [noticeKey, setNoticeKey] = useState(0);
+
+  const [editMode, setEditMode] = useState(false);
+  const [importUrl, setImportUrl] = useState("");
+
+  const books: BookSummary[] = useMemo(
+    () => [...FIXED_BOOK_SUMMARIES, ...userBooks.map(toBookSummary)],
+    [userBooks],
+  );
 
   useEffect(() => {
     const stored = document.documentElement.getAttribute("data-theme");
-    if (stored === "dark" || stored === "light") {
-      setTheme(stored);
-    }
+    if (stored === "dark" || stored === "light") setTheme(stored);
   }, []);
+
+  useEffect(() => {
+    void getAllBooks().then(setUserBooks);
+  }, []);
+
+  const showNotice = useCallback((message: string) => {
+    setNotice(message);
+    setNoticeKey((k) => k + 1);
+  }, []);
+
+  useEffect(() => {
+    if (!notice) return;
+    const id = window.setTimeout(() => setNotice(""), 5000);
+    return () => window.clearTimeout(id);
+  }, [notice, noticeKey]);
 
   const toggleTheme = useCallback(() => {
     setTheme((prev) => {
@@ -86,172 +121,161 @@ export default function Home() {
     });
   }, []);
 
-  const loadBooks = useCallback(async (query = "") => {
-    setIsLoadingBooks(true);
-    setErrorMessage("");
-    try {
-      const params = new URLSearchParams({
-        limit: "30",
-        offset: "0",
-      });
-      if (query.trim().length > 0) {
-        params.set("query", query.trim());
-      }
-
-      const response = await requestJson<ApiResponse<BooksListData>>(`/api/books/list?${params.toString()}`);
-
-      if (!response.success) {
-        throw new Error(response.error.message);
-      }
-
-      setBooks(response.data.books);
-      setBooksSource(response.data.source);
-
-      setSelectedBookId((prev) => {
-        if (response.data.books.length === 0) {
-          return "";
-        }
-        if (prev && response.data.books.some((book) => book.id === prev)) {
-          return prev;
-        }
-        return response.data.books[0]?.id ?? "";
-      });
-    } catch (error) {
-      setErrorMessage(normalizeErrorMessage(error, "作品一覧の読み込みに失敗しました"));
-    } finally {
-      setIsLoadingBooks(false);
-    }
-  }, []);
-
   useEffect(() => {
-    void loadBooks("");
-  }, [loadBooks]);
-
-  const searchBooks = useCallback(() => {
-    void loadBooks(bookQuery);
-  }, [bookQuery, loadBooks]);
-
-  const resetBooksToFixed = useCallback(() => {
-    setBookQuery("");
-    void loadBooks("");
-  }, [loadBooks]);
-
-  useEffect(() => {
-    if (!puzzle || result) {
-      return;
-    }
-
+    if (!puzzle || result) return;
     const timerId = window.setInterval(() => {
       if (startedAtMs) {
         setElapsedSeconds(Math.max(0, Math.floor((Date.now() - startedAtMs) / 1000)));
       }
     }, 1000);
-
-    return () => {
-      window.clearInterval(timerId);
-    };
+    return () => window.clearInterval(timerId);
   }, [puzzle, result, startedAtMs]);
 
   const segmentById = useMemo(() => {
     const map = new Map<string, PuzzleData["segments"][number]>();
     if (puzzle) {
-      puzzle.segments.forEach((segment) => {
-        map.set(segment.id, segment);
-      });
+      puzzle.segments.forEach((seg) => map.set(seg.id, seg));
     }
     return map;
   }, [puzzle]);
 
-  const answerSegments = useMemo(() => {
-    return answerIds
-      .map((id) => segmentById.get(id))
-      .filter((segment): segment is NonNullable<typeof segment> => Boolean(segment));
-  }, [answerIds, segmentById]);
+  const answerSegments = useMemo(
+    () =>
+      answerIds
+        .map((id) => segmentById.get(id))
+        .filter((s): s is NonNullable<typeof s> => Boolean(s)),
+    [answerIds, segmentById],
+  );
 
   const fixedSegment = useMemo(() => {
-    if (!puzzle?.fixedSegmentId) {
-      return null;
-    }
+    if (!puzzle?.fixedSegmentId) return null;
     return segmentById.get(puzzle.fixedSegmentId) ?? null;
   }, [puzzle, segmentById]);
 
   const availableSegments = useMemo(() => {
-    if (!puzzle) {
-      return [];
-    }
-    const selectedIds = new Set(answerIds);
-    return puzzle.shuffledSegments.filter((segment) => !selectedIds.has(segment.id));
+    if (!puzzle) return [];
+    const selected = new Set(answerIds);
+    return puzzle.shuffledSegments.filter((seg) => !selected.has(seg.id));
   }, [puzzle, answerIds]);
 
   const progressRate = useMemo(() => {
-    if (!puzzle || puzzle.segments.length === 0) {
-      return 0;
-    }
+    if (!puzzle || puzzle.segments.length === 0) return 0;
     return Math.round((answerSegments.length / puzzle.segments.length) * 100);
   }, [puzzle, answerSegments.length]);
 
-  const generatePuzzle = useCallback(async () => {
-    setIsGenerating(true);
-    setErrorMessage("");
+  const importBook = useCallback(async () => {
+    const workId = parseAozoraUrl(importUrl);
+    if (!workId) {
+      showNotice("\u7121\u52B9\u306A\u9752\u7A7A\u6587\u5EAB\u306EURL\u3067\u3059");
+      return;
+    }
+
+    if (userBooks.some((b) => b.id === workId)) {
+      showNotice("\u3053\u306E\u4F5C\u54C1\u306F\u65E2\u306B\u8FFD\u52A0\u3055\u308C\u3066\u3044\u307E\u3059");
+      return;
+    }
+
+    setIsImporting(true);
+    setNotice("");
 
     try {
-      const query = new URLSearchParams({
-        difficulty,
+      const res = await requestJson<
+        ApiResponse<{
+          book: BookSummary;
+          passages: { difficulty: Difficulty; encrypted: string }[];
+        }>
+      >("/api/books/import", {
+        method: "POST",
+        body: JSON.stringify({ workId }),
       });
 
-      if (selectedBookId) {
-        query.set("bookId", selectedBookId);
+      if (!res.success) throw new Error(res.error.message);
+
+      const stored: StoredBook = {
+        id: res.data.book.id,
+        title: res.data.book.title,
+        author: res.data.book.author,
+        kanaType: res.data.book.kanaType,
+        passages: res.data.passages,
+        addedAt: new Date().toISOString(),
+      };
+
+      await putBook(stored);
+      setUserBooks((prev) => [...prev, stored]);
+      setSelectedBookId(stored.id);
+      setImportUrl("");
+      showNotice(`\u300C${stored.title}\u300D\u2014 ${stored.author}`);
+    } catch (error) {
+      showNotice(normalizeErrorMessage(error, "\u4F5C\u54C1\u306E\u53D6\u308A\u8FBC\u307F\u306B\u5931\u6557\u3057\u307E\u3057\u305F"));
+    } finally {
+      setIsImporting(false);
+    }
+  }, [importUrl, userBooks]);
+
+  const removeBook = useCallback(async (id: string) => {
+    await deleteBook(id);
+    setUserBooks((prev) => {
+      const next = prev.filter((b) => b.id !== id);
+      if (next.length === 0) setEditMode(false);
+      return next;
+    });
+    setSelectedBookId((prev) => (prev === id ? FIXED_BOOK_SUMMARIES[0]?.id ?? "" : prev));
+  }, []);
+
+  const generatePuzzle = useCallback(async () => {
+    setIsGenerating(true);
+    setNotice("");
+
+    try {
+      const body: Record<string, string> = {
+        difficulty,
+        bookId: selectedBookId,
+      };
+
+      if (!isFixedBook(selectedBookId)) {
+        const stored = userBooks.find((b) => b.id === selectedBookId);
+        if (!stored) throw new Error("\u4F5C\u54C1\u304C\u30ED\u30FC\u30AB\u30EB\u30B9\u30C8\u30EC\u30FC\u30B8\u306B\u898B\u3064\u304B\u308A\u307E\u305B\u3093");
+
+        const encrypted = pickRandomPassage(stored, difficulty);
+        if (!encrypted) throw new Error("\u3053\u306E\u96E3\u6613\u5EA6\u3067\u4F7F\u7528\u53EF\u80FD\u306A\u4E00\u7BC0\u304C\u3042\u308A\u307E\u305B\u3093");
+
+        body.encryptedPassage = encrypted;
+        body.title = stored.title;
+        body.author = stored.author;
       }
 
-      const response = await requestJson<ApiResponse<PuzzleData>>(`/api/puzzle/generate?${query.toString()}`);
+      const response = await requestJson<ApiResponse<PuzzleData>>(
+        "/api/puzzle/generate",
+        { method: "POST", body: JSON.stringify(body) },
+      );
 
-      if (!response.success) {
-        throw new Error(response.error.message);
-      }
+      if (!response.success) throw new Error(response.error.message);
 
       const nextPuzzle = response.data;
       setPuzzle(nextPuzzle);
-
-      const initialAnswer = nextPuzzle.fixedSegmentId ? [nextPuzzle.fixedSegmentId] : [];
-      setAnswerIds(initialAnswer);
-
+      setAnswerIds(nextPuzzle.fixedSegmentId ? [nextPuzzle.fixedSegmentId] : []);
       setResult(null);
       setElapsedSeconds(0);
       setStartedAtMs(Date.now());
     } catch (error) {
-      setErrorMessage(normalizeErrorMessage(error, "パズル生成に失敗しました"));
+      showNotice(normalizeErrorMessage(error, "\u30D1\u30BA\u30EB\u751F\u6210\u306B\u5931\u6557\u3057\u307E\u3057\u305F"));
     } finally {
       setIsGenerating(false);
     }
-  }, [difficulty, selectedBookId]);
+  }, [difficulty, selectedBookId, userBooks]);
 
   const addSegmentToAnswer = useCallback((segmentId: string) => {
-    setAnswerIds((prev) => {
-      if (prev.includes(segmentId)) {
-        return prev;
-      }
-      return [...prev, segmentId];
-    });
+    setAnswerIds((prev) => (prev.includes(segmentId) ? prev : [...prev, segmentId]));
   }, []);
 
   const removeSegmentFromAnswer = useCallback(
     (index: number) => {
-      if (!puzzle) {
-        return;
-      }
-
+      if (!puzzle) return;
       const fixedId = puzzle.fixedSegmentId;
       setAnswerIds((prev) => {
         const targetId = prev[index];
-        if (!targetId) {
-          return prev;
-        }
-
-        if (fixedId && targetId === fixedId) {
-          return prev;
-        }
-
-        return prev.filter((_, itemIndex) => itemIndex !== index);
+        if (!targetId || (fixedId && targetId === fixedId)) return prev;
+        return prev.filter((_, i) => i !== index);
       });
     },
     [puzzle],
@@ -259,21 +283,12 @@ export default function Home() {
 
   const moveAnswerSegment = useCallback(
     (index: number, direction: "left" | "right") => {
-      if (!puzzle) {
-        return;
-      }
-
+      if (!puzzle) return;
       const fixedId = puzzle.fixedSegmentId;
       setAnswerIds((prev) => {
         const nextIndex = direction === "left" ? index - 1 : index + 1;
-        if (nextIndex < 0 || nextIndex >= prev.length) {
-          return prev;
-        }
-
-        if (fixedId && (prev[index] === fixedId || prev[nextIndex] === fixedId)) {
-          return prev;
-        }
-
+        if (nextIndex < 0 || nextIndex >= prev.length) return prev;
+        if (fixedId && (prev[index] === fixedId || prev[nextIndex] === fixedId)) return prev;
         const next = [...prev];
         [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
         return next;
@@ -283,12 +298,8 @@ export default function Home() {
   );
 
   const resetAnswer = useCallback(() => {
-    if (!puzzle) {
-      return;
-    }
-
-    const initialAnswer = puzzle.fixedSegmentId ? [puzzle.fixedSegmentId] : [];
-    setAnswerIds(initialAnswer);
+    if (!puzzle) return;
+    setAnswerIds(puzzle.fixedSegmentId ? [puzzle.fixedSegmentId] : []);
     setResult(null);
     setElapsedSeconds(0);
     setStartedAtMs(Date.now());
@@ -299,12 +310,10 @@ export default function Home() {
   );
 
   const submitAnswer = useCallback(async () => {
-    if (!puzzle || !startedAtMs) {
-      return;
-    }
+    if (!puzzle || !startedAtMs) return;
 
     setIsSubmitting(true);
-    setErrorMessage("");
+    setNotice("");
 
     try {
       const now = new Date();
@@ -322,24 +331,22 @@ export default function Home() {
         }),
       });
 
-      if (!response.success) {
-        throw new Error(response.error.message);
-      }
-
+      if (!response.success) throw new Error(response.error.message);
       setResult(response.data);
     } catch (error) {
-      setErrorMessage(normalizeErrorMessage(error, "解答送信に失敗しました"));
+      showNotice(normalizeErrorMessage(error, "\u89E3\u7B54\u9001\u4FE1\u306B\u5931\u6557\u3057\u307E\u3057\u305F"));
     } finally {
       setIsSubmitting(false);
     }
   }, [answerIds, elapsedSeconds, puzzle, startedAtMs]);
 
   const selectedBook = useMemo(
-    () => books.find((book) => book.id === selectedBookId),
+    () => books.find((b) => b.id === selectedBookId),
     [books, selectedBookId],
   );
 
   return (
+  <>
     <div className="aozora-root">
       <header className="site-header">
         <div>
@@ -378,65 +385,94 @@ export default function Home() {
             <select
               id="book-select"
               value={selectedBookId}
-              onChange={(event) => setSelectedBookId(event.target.value)}
-              disabled={isLoadingBooks || isGenerating || books.length === 0}
+              onChange={(e) => setSelectedBookId(e.target.value)}
+              disabled={isGenerating || books.length === 0}
             >
-              {books.map((book) => (
-                <option key={book.id} value={book.id}>
-                  {book.title} / {book.author}
-                </option>
-              ))}
+              {FIXED_BOOK_SUMMARIES.length > 0 && (
+                <optgroup label="固定作品">
+                  {FIXED_BOOK_SUMMARIES.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.title} / {b.author}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {userBooks.length > 0 && (
+                <optgroup label="取り込み作品">
+                  {userBooks.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.title} / {b.author}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
             </select>
+            {userBooks.length > 0 && (
+              <button
+                type="button"
+                className="btn"
+                onClick={() => setEditMode((prev) => !prev)}
+              >
+                {editMode ? "\u9589\u3058\u308B" : "\u7DE8\u96C6"}
+              </button>
+            )}
           </div>
         </div>
 
-        <div className="control-row">
-          <label htmlFor="book-query" className="control-label">
-            検索
-          </label>
-          <div className="book-search-row">
-            <input
-              id="book-query"
-              type="text"
-              value={bookQuery}
-              placeholder="作品名または著者名"
-              onChange={(event) => setBookQuery(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  searchBooks();
-                }
-              }}
-              disabled={isLoadingBooks || isGenerating || isSubmitting}
-            />
-            <button type="button" className="btn" onClick={searchBooks} disabled={isLoadingBooks}>
-              検索
-            </button>
-            <button type="button" className="btn" onClick={resetBooksToFixed} disabled={isLoadingBooks}>
-              クリア
-            </button>
-          </div>
+        <div className="import-row">
+          <input
+            type="text"
+            value={importUrl}
+            placeholder="https://www.aozora.gr.jp/cards/.../files/..."
+            onChange={(e) => setImportUrl(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                void importBook();
+              }
+            }}
+            disabled={isImporting}
+          />
+          <button
+            type="button"
+            className="btn"
+            onClick={() => void importBook()}
+            disabled={isImporting || importUrl.trim().length === 0}
+          >
+            {isImporting ? "\u53D6\u8FBC\u4E2D\u2026" : "\u8FFD\u52A0"}
+          </button>
         </div>
+
+        {editMode && userBooks.length > 0 && (
+          <ul className="book-list">
+            {userBooks.map((b) => (
+              <li key={b.id} className="book-list-item">
+                <span>
+                  {b.title} / {b.author}
+                </span>
+                <button
+                  type="button"
+                  className="btn btn-delete"
+                  onClick={() => void removeBook(b.id)}
+                >
+                  削除
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
 
         <div className="action-row">
-          <button type="button" className="btn btn-primary" onClick={generatePuzzle} disabled={isGenerating || isSubmitting}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => void generatePuzzle()}
+            disabled={isGenerating || isSubmitting}
+          >
             {isGenerating ? "生成中\u2026" : puzzle ? "次の問題" : "問題を生成"}
           </button>
-          <span className="source-tag">
-            {booksSource === "fixed"
-              ? "fixed-assets"
-              : booksSource === "fallback"
-                ? "fallback"
-                : "libroaozora"}
-          </span>
         </div>
       </section>
-
-      {errorMessage ? (
-        <p className="error-line" role="alert">
-          {errorMessage}
-        </p>
-      ) : null}
 
       {puzzle ? (
         <main>
@@ -477,16 +513,14 @@ export default function Home() {
                 ) : (
                   <div className="answer-flow">
                     {answerSegments.map((segment, index) => {
-                      const isFixed = puzzle.fixedSegmentId === segment.id;
-
-                      if (isFixed) {
+                      const isPinned = puzzle.fixedSegmentId === segment.id;
+                      if (isPinned) {
                         return (
                           <span key={segment.id} className="fragment pinned">
                             {segment.text}
                           </span>
                         );
                       }
-
                       return (
                         <div key={segment.id} className="answer-chip-wrap">
                           <button
@@ -525,9 +559,7 @@ export default function Home() {
             </div>
 
             <div className="pool-area">
-              <p className="section-label">
-                断片 — {availableSegments.length}語
-              </p>
+              <p className="section-label">断片 — {availableSegments.length}語</p>
               <div className="pool-scatter">
                 {availableSegments.map((segment) => (
                   <button
@@ -548,7 +580,12 @@ export default function Home() {
             <button type="button" className="btn" onClick={resetAnswer} disabled={isSubmitting}>
               リセット
             </button>
-            <button type="button" className="btn btn-primary" onClick={submitAnswer} disabled={!canSubmit}>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={submitAnswer}
+              disabled={!canSubmit}
+            >
               {isSubmitting ? "送信中\u2026" : "答え合わせ"}
             </button>
           </div>
@@ -577,5 +614,12 @@ export default function Home() {
         </main>
       )}
     </div>
+
+    {notice && (
+      <div key={noticeKey} className="toast" role="status">
+        <p className="toast-text">{notice}</p>
+      </div>
+    )}
+  </>
   );
 }
