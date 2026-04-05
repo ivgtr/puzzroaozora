@@ -1,40 +1,83 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
+# 青空パズル（puzzroaozora）
 
-## Getting Started
+青空文庫作品の一節を語句パズル化し、語順再構成で記憶力を鍛える Next.js アプリです。  
+`libroaozora`（https://github.com/ivgtr/libroaozora）の API を利用して作品一覧と本文を取得します。
 
-First, run the development server:
+## 現在の実装範囲
+
+- 作品一覧取得: `GET /api/books/list`
+- パズル生成: `GET /api/puzzle/generate`
+- 解答判定: `POST /api/puzzle/submit`
+- ヘルスチェック: `GET /api/health`
+- UI: 難易度選択、作品選択、語句配置、並び替え、採点結果表示
+
+`AOZORA_API_BASE_URL` に接続できない場合は、内蔵フォールバック作品で動作します。
+
+## セットアップ
 
 ```bash
+npm install
+cp .env.example .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+開発サーバー: `http://localhost:5678`
 
-You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
+## 環境変数
 
-[API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.ts`.
+- `AOZORA_API_BASE_URL`: libroaozora API のベース URL（例: `http://localhost:8787`）
+- `PUZZLE_TOKEN_SECRET`: 解答トークン署名キー（任意、未指定時は開発用既定値）
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) instead of React pages.
+## API 仕様（このリポジトリ側）
 
-This project uses [`next/font`](https://nextjs.org/docs/pages/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### `GET /api/books/list`
 
-## Learn More
+クエリ:
+- `limit` (number, optional)
+- `offset` (number, optional)
+- `author` (string, optional)
 
-To learn more about Next.js, take a look at the following resources:
+レスポンス:
+- `success: true`
+- `data.books`: 作品配列
+- `data.total`: 総件数
+- `data.hasMore`: 次ページ有無
+- `data.source`: `api` または `fallback`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn-pages-router) - an interactive Next.js tutorial.
+### `GET /api/puzzle/generate`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+クエリ:
+- `bookId` (string, optional)
+- `difficulty` (`easy` | `normal` | `hard`)
+- `seed` (string, optional)
 
-## Deploy on Vercel
+レスポンス:
+- `success: true`
+- `data`: パズル本体（語句配列、シャッフル配列、`answerToken` を含む）
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### `POST /api/puzzle/submit`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
+ボディ:
+
+```json
+{
+  "answer": {
+    "puzzleId": "...",
+    "userAnswer": ["seg-..."],
+    "startedAt": "2026-04-05T00:00:00.000Z",
+    "submittedAt": "2026-04-05T00:00:12.000Z",
+    "timeSpent": 12,
+    "answerToken": "..."
+  }
+}
+```
+
+レスポンス:
+- `success: true`
+- `data.isCorrect`, `data.score`, `data.correctPositions` など
+
+## 備考
+
+- `libroaozora` の `GET /v1/works` / `GET /v1/works/:id/content?format=plain` を利用
+- 青空文庫の注記（ルビ・注釈・ヘッダ/フッタ）を簡易正規化してパズル化
+- 品詞は厳密な形態素解析ではなく、現在はヒューリスティック分類
