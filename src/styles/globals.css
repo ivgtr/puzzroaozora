@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* --------------------------------
-   Theme: Light — 薄い水色
+   Theme: Light
    -------------------------------- */
 :root,
 [data-theme="light"] {
@@ -15,7 +15,7 @@
 }
 
 /* --------------------------------
-   Theme: Dark — 薄暗い青
+   Theme: Dark
    -------------------------------- */
 [data-theme="dark"] {
   --bg: #111c28;
@@ -65,29 +65,17 @@ input {
 }
 
 /* --------------------------------
-   Header
+   Divider
    -------------------------------- */
-.site-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 20px;
+.divider {
+  margin: 14px 0 16px;
+  border: none;
+  border-top: 1px solid var(--line);
 }
 
-.site-header h1 {
-  margin: 0;
-  font-size: clamp(1.5rem, 3vw, 2rem);
-  letter-spacing: 0.05em;
-  line-height: 1.2;
-}
-
-.site-header p {
-  margin: 4px 0 0;
-  color: var(--accent);
-  font-size: 0.88rem;
-}
-
+/* --------------------------------
+   Theme Toggle
+   -------------------------------- */
 .theme-toggle {
   appearance: none;
   border: 1px solid var(--line-strong);
@@ -105,43 +93,6 @@ input {
 
 .theme-toggle:hover {
   opacity: 0.6;
-}
-
-/* --------------------------------
-   Divider
-   -------------------------------- */
-.divider {
-  margin: 14px 0 16px;
-  border: none;
-  border-top: 1px solid var(--line);
-}
-
-/* --------------------------------
-   Controls
-   -------------------------------- */
-.controls {
-  margin-bottom: 16px;
-}
-
-.control-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 10px;
-}
-
-.control-label {
-  color: var(--accent);
-  font-size: 0.84rem;
-  font-family: "IBM Plex Mono", "JetBrains Mono", "SFMono-Regular", "Menlo", monospace;
-  letter-spacing: 0.02em;
-  min-width: 52px;
-}
-
-.difficulty-group {
-  display: flex;
-  gap: 5px;
 }
 
 /* --------------------------------
@@ -181,68 +132,6 @@ button:disabled {
   cursor: not-allowed;
 }
 
-/* --------------------------------
-   Book Select
-   -------------------------------- */
-.book-select-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-  flex-wrap: wrap;
-}
-
-.book-select-row select {
-  flex: 1;
-  min-width: min(100%, 320px);
-  border: 1px solid var(--line-strong);
-  border-radius: 4px;
-  background: transparent;
-  padding: 5px 10px;
-  font-size: 0.9rem;
-}
-
-.import-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 10px;
-}
-
-.import-row input {
-  flex: 1;
-  min-width: min(100%, 280px);
-  border: 1px solid var(--line-strong);
-  border-radius: 4px;
-  background: transparent;
-  padding: 5px 10px;
-  font-size: 0.9rem;
-}
-
-.book-list {
-  list-style: none;
-  margin: 0 0 10px;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.book-list-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 4px 8px;
-  font-size: 0.88rem;
-  border-bottom: 1px solid var(--line);
-}
-
-.book-list-item:last-child {
-  border-bottom: none;
-}
-
 .btn-delete {
   font-size: 0.78rem;
   padding: 2px 8px;
@@ -250,10 +139,49 @@ button:disabled {
   border-color: var(--accent);
 }
 
-.action-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.btn-back {
+  font-size: 0.82rem;
+  padding: 3px 10px;
+}
+
+/* --------------------------------
+   Fragment
+   -------------------------------- */
+.fragment {
+  appearance: none;
+  border: none;
+  background: color-mix(in oklab, var(--accent) 10%, transparent);
+  border-radius: 2px;
+  padding: 1px 5px;
+  cursor: pointer;
+  font-size: 0.96rem;
+  line-height: 1.4;
+  box-decoration-break: clone;
+  transition: background-color 0.15s ease-out;
+}
+
+.fragment:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--accent) 22%, transparent);
+}
+
+.fragment:disabled {
+  cursor: not-allowed;
+}
+
+.fragment.pinned {
+  cursor: default;
+  opacity: 0.6;
+}
+
+/* --------------------------------
+   Section Label
+   -------------------------------- */
+.section-label {
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+  color: var(--accent);
+  font-family: "IBM Plex Mono", "JetBrains Mono", "SFMono-Regular", "Menlo", monospace;
+  letter-spacing: 0.03em;
 }
 
 /* --------------------------------
@@ -291,256 +219,19 @@ button:disabled {
 }
 
 /* --------------------------------
-   Game Status
+   Page Enter Animation
    -------------------------------- */
-.game-status {
-  display: flex;
-  gap: 18px;
-  flex-wrap: wrap;
-  margin-bottom: 4px;
-  font-size: 0.8rem;
-  color: var(--accent);
-  font-family: "IBM Plex Mono", "JetBrains Mono", "SFMono-Regular", "Menlo", monospace;
-  letter-spacing: 0.02em;
+.page-enter {
+  animation: page-fade-in 0.22s ease-out;
+}
+
+@keyframes page-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* --------------------------------
-   Work Meta
-   -------------------------------- */
-.work-meta h2 {
-  margin: 0;
-  font-size: clamp(1.2rem, 2.2vw, 1.6rem);
-  line-height: 1.35;
-}
-
-.work-meta p {
-  margin: 4px 0 0;
-}
-
-.work-meta small {
-  display: block;
-  margin-top: 3px;
-  color: var(--accent);
-  font-size: 0.82rem;
-}
-
-/* --------------------------------
-   Progress
-   -------------------------------- */
-.progress-section {
-  margin-bottom: 16px;
-}
-
-.progress-bar {
-  height: 4px;
-  border-radius: 2px;
-  background: var(--surface-strong);
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  border-radius: inherit;
-  background: var(--accent);
-  opacity: 0.6;
-  transition: width 0.24s ease-out;
-}
-
-.stats-row {
-  display: flex;
-  gap: 16px;
-  margin-top: 6px;
-  font-size: 0.76rem;
-  color: var(--accent);
-  font-family: "IBM Plex Mono", "JetBrains Mono", "SFMono-Regular", "Menlo", monospace;
-  letter-spacing: 0.02em;
-}
-
-/* --------------------------------
-   Game Board
-   -------------------------------- */
-.game-board {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  margin-bottom: 16px;
-}
-
-.section-label {
-  margin: 0 0 8px;
-  font-size: 0.78rem;
-  color: var(--accent);
-  font-family: "IBM Plex Mono", "JetBrains Mono", "SFMono-Regular", "Menlo", monospace;
-  letter-spacing: 0.03em;
-}
-
-.placeholder {
-  margin: 0;
-  color: color-mix(in oklab, var(--text) 35%, transparent);
-  font-size: 0.9rem;
-}
-
-/* --------------------------------
-   Shared fragment style
-   切り取られたテキスト断片の共通表現
-   -------------------------------- */
-.fragment {
-  appearance: none;
-  border: none;
-  background: color-mix(in oklab, var(--accent) 10%, transparent);
-  border-radius: 2px;
-  padding: 1px 5px;
-  cursor: pointer;
-  font-size: 0.96rem;
-  line-height: 1.4;
-  box-decoration-break: clone;
-  transition: background-color 0.15s ease-out;
-}
-
-.fragment:hover:not(:disabled) {
-  background: color-mix(in oklab, var(--accent) 22%, transparent);
-}
-
-.fragment:disabled {
-  cursor: not-allowed;
-}
-
-/* --------------------------------
-   Answer — 再構成される文
-   -------------------------------- */
-.answer-area {
-  min-height: 48px;
-  padding: 10px 14px;
-  border: 1px dashed var(--line-strong);
-  border-radius: 2px;
-}
-
-.answer-flow {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 8px 4px;
-}
-
-.answer-chip-wrap .fragment {
-  display: block;
-  background: color-mix(in oklab, var(--accent) 14%, transparent);
-}
-
-.answer-chip-wrap .fragment:hover:not(:disabled) {
-  background: color-mix(in oklab, var(--accent) 6%, transparent);
-}
-
-.fragment.pinned {
-  cursor: default;
-  opacity: 0.6;
-}
-
-/* --------------------------------
-   Pool — 散らばった断片
-   -------------------------------- */
-.pool-area {
-  border-top: 1px solid var(--line);
-  padding-top: 18px;
-}
-
-.pool-scatter {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 6px 10px;
-}
-
-/* --------------------------------
-   Mini Actions
-   -------------------------------- */
-.mini-actions {
-  display: flex;
-  gap: 2px;
-  margin-top: 2px;
-}
-
-.mini-actions button {
-  width: 22px;
-  height: 22px;
-  border: 1px solid var(--line);
-  border-radius: 3px;
-  background: transparent;
-  cursor: pointer;
-  line-height: 1;
-  padding: 0;
-  font-size: 0.72rem;
-  color: var(--accent);
-  transition: opacity 0.2s ease-out;
-}
-
-.mini-actions button:hover:not(:disabled) {
-  opacity: 0.6;
-}
-
-/* --------------------------------
-   Game Actions
-   -------------------------------- */
-.game-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 14px;
-}
-
-/* --------------------------------
-   Result
-   -------------------------------- */
-.result-card {
-  padding: 14px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: var(--surface);
-}
-
-.result-card.ok {
-  border-left: 3px solid var(--accent);
-}
-
-.result-card.ng {
-  border-left: 3px dashed var(--accent);
-}
-
-.result-card h3 {
-  margin: 0 0 6px;
-  font-size: 1rem;
-}
-
-.result-card p {
-  margin: 4px 0;
-  font-size: 0.92rem;
-}
-
-.correct-text {
-  padding-top: 6px;
-  border-top: 1px solid var(--line);
-  margin-top: 6px;
-}
-
-/* --------------------------------
-   Intro
-   -------------------------------- */
-.intro-section {
-  padding-top: 12px;
-}
-
-.intro-section h2 {
-  margin: 0 0 6px;
-  font-size: 1.15rem;
-}
-
-.intro-section p {
-  margin: 0;
-  font-size: 0.94rem;
-}
-
-/* --------------------------------
-   Utilities
+   Mono Utility
    -------------------------------- */
 .mono {
   font-family: "IBM Plex Mono", "JetBrains Mono", "SFMono-Regular", "Menlo", monospace;
@@ -549,35 +240,12 @@ button:disabled {
 }
 
 /* --------------------------------
-   Responsive
+   Responsive Base
    -------------------------------- */
 @media (max-width: 768px) {
   .aozora-root {
     width: min(96vw, 960px);
     margin-top: 20px;
     margin-bottom: 32px;
-  }
-
-  .site-header {
-    flex-wrap: wrap;
-  }
-
-  .control-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
-  }
-
-  .stats-row {
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-
-  .book-select-row {
-    width: 100%;
-  }
-
-  .book-select-row select {
-    min-width: 100%;
   }
 }

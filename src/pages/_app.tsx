@@ -1,6 +1,12 @@
 import "@/styles/globals.css";
+import "@/styles/setup.css";
+import "@/styles/play.css";
+import "@/styles/result.css";
 import type { AppProps } from "next/app";
 import Head from "next/head";
+import { AppProvider } from "@/contexts/AppContext";
+import { GameProvider } from "@/contexts/GameContext";
+import { Toast } from "@/components/common/Toast";
 
 const SITE_NAME = "青空パズル";
 const SITE_DESCRIPTION =
@@ -21,7 +27,12 @@ export default function App({ Component, pageProps }: AppProps) {
         <meta name="twitter:description" content={SITE_DESCRIPTION} />
         <link rel="icon" href="/favicon.ico" />
       </Head>
-      <Component {...pageProps} />
+      <AppProvider>
+        <GameProvider>
+          <Component {...pageProps} />
+          <Toast />
+        </GameProvider>
+      </AppProvider>
     </>
   );
 }

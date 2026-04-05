@@ -64,4 +64,6 @@ export const FIXED_WORKS: FixedWork[] = [
   },
 ];
 
+export const FIXED_BOOK_SUMMARIES: BookSummary[] = FIXED_WORKS.map((w) => w.book);
+
 export const FIXED_BY_ID = new Map(FIXED_WORKS.map((work) => [work.book.id, work]));

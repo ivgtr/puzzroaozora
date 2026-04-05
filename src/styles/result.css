@@ -1,0 +1,107 @@
+/* --------------------------------
+   Result Page
+   -------------------------------- */
+.result-root {
+  display: flex;
+  flex-direction: column;
+  min-height: 60vh;
+}
+
+.result-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+
+.result-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px 0;
+}
+
+.result-verdict {
+  margin: 0;
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  animation: result-enter 0.3s ease-out;
+}
+
+.result-feedback {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--accent);
+}
+
+/* --------------------------------
+   Score Display
+   -------------------------------- */
+.result-scores {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--surface);
+}
+
+.result-score-main {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.result-score-label {
+  font-size: 0.84rem;
+  color: var(--accent);
+  font-family: "IBM Plex Mono", "JetBrains Mono", "SFMono-Regular", "Menlo", monospace;
+}
+
+.result-score-value {
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.result-score-details {
+  display: flex;
+  gap: 16px;
+  font-size: 0.84rem;
+  color: var(--accent);
+  font-family: "IBM Plex Mono", "JetBrains Mono", "SFMono-Regular", "Menlo", monospace;
+}
+
+/* --------------------------------
+   Correct Text
+   -------------------------------- */
+.result-correct-text {
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--surface);
+}
+
+.result-correct-text p {
+  margin: 0;
+  font-size: 0.94rem;
+  line-height: 1.8;
+}
+
+/* --------------------------------
+   Actions
+   -------------------------------- */
+.result-actions {
+  display: flex;
+  gap: 10px;
+  padding-top: 8px;
+}
+
+/* --------------------------------
+   Animations
+   -------------------------------- */
+@keyframes result-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
