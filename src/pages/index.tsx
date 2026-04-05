@@ -5,7 +5,7 @@ type BooksListData = {
   books: BookSummary[];
   total: number;
   hasMore: boolean;
-  source: "api" | "fallback";
+  source: "fixed" | "api" | "fallback";
 };
 
 const DIFFICULTY_LABEL: Record<Difficulty, string> = {
@@ -51,8 +51,9 @@ export default function Home() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [difficulty, setDifficulty] = useState<Difficulty>("normal");
   const [books, setBooks] = useState<BookSummary[]>([]);
-  const [booksSource, setBooksSource] = useState<"api" | "fallback">("api");
+  const [booksSource, setBooksSource] = useState<"fixed" | "api" | "fallback">("fixed");
   const [selectedBookId, setSelectedBookId] = useState<string>("");
+  const [bookQuery, setBookQuery] = useState("");
 
   const [puzzle, setPuzzle] = useState<PuzzleData | null>(null);
   const [answerIds, setAnswerIds] = useState<string[]>([]);
@@ -85,11 +86,19 @@ export default function Home() {
     });
   }, []);
 
-  const loadBooks = useCallback(async () => {
+  const loadBooks = useCallback(async (query = "") => {
     setIsLoadingBooks(true);
     setErrorMessage("");
     try {
-      const response = await requestJson<ApiResponse<BooksListData>>("/api/books/list?limit=30&offset=0");
+      const params = new URLSearchParams({
+        limit: "30",
+        offset: "0",
+      });
+      if (query.trim().length > 0) {
+        params.set("query", query.trim());
+      }
+
+      const response = await requestJson<ApiResponse<BooksListData>>(`/api/books/list?${params.toString()}`);
 
       if (!response.success) {
         throw new Error(response.error.message);
@@ -99,10 +108,13 @@ export default function Home() {
       setBooksSource(response.data.source);
 
       setSelectedBookId((prev) => {
-        if (prev || response.data.books.length === 0) {
+        if (response.data.books.length === 0) {
+          return "";
+        }
+        if (prev && response.data.books.some((book) => book.id === prev)) {
           return prev;
         }
-        return response.data.books[0].id;
+        return response.data.books[0]?.id ?? "";
       });
     } catch (error) {
       setErrorMessage(normalizeErrorMessage(error, "作品一覧の読み込みに失敗しました"));
@@ -112,7 +124,16 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    void loadBooks();
+    void loadBooks("");
+  }, [loadBooks]);
+
+  const searchBooks = useCallback(() => {
+    void loadBooks(bookQuery);
+  }, [bookQuery, loadBooks]);
+
+  const resetBooksToFixed = useCallback(() => {
+    setBookQuery("");
+    void loadBooks("");
   }, [loadBooks]);
 
   useEffect(() => {
@@ -366,8 +387,33 @@ export default function Home() {
                 </option>
               ))}
             </select>
-            <button type="button" className="btn" onClick={loadBooks} disabled={isLoadingBooks}>
-              {isLoadingBooks ? "読込中\u2026" : "再読込"}
+          </div>
+        </div>
+
+        <div className="control-row">
+          <label htmlFor="book-query" className="control-label">
+            検索
+          </label>
+          <div className="book-search-row">
+            <input
+              id="book-query"
+              type="text"
+              value={bookQuery}
+              placeholder="作品名または著者名"
+              onChange={(event) => setBookQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  searchBooks();
+                }
+              }}
+              disabled={isLoadingBooks || isGenerating || isSubmitting}
+            />
+            <button type="button" className="btn" onClick={searchBooks} disabled={isLoadingBooks}>
+              検索
+            </button>
+            <button type="button" className="btn" onClick={resetBooksToFixed} disabled={isLoadingBooks}>
+              クリア
             </button>
           </div>
         </div>
@@ -377,7 +423,11 @@ export default function Home() {
             {isGenerating ? "生成中\u2026" : puzzle ? "次の問題" : "問題を生成"}
           </button>
           <span className="source-tag">
-            {booksSource === "fallback" ? "fallback" : "libroaozora"}
+            {booksSource === "fixed"
+              ? "fixed-assets"
+              : booksSource === "fallback"
+                ? "fallback"
+                : "libroaozora"}
           </span>
         </div>
       </section>
@@ -428,14 +478,23 @@ export default function Home() {
                   <div className="answer-flow">
                     {answerSegments.map((segment, index) => {
                       const isFixed = puzzle.fixedSegmentId === segment.id;
+
+                      if (isFixed) {
+                        return (
+                          <span key={segment.id} className="fragment pinned">
+                            {segment.text}
+                          </span>
+                        );
+                      }
+
                       return (
                         <div key={segment.id} className="answer-chip-wrap">
                           <button
                             type="button"
-                            className={`fragment${isFixed ? " fixed" : ""}`}
+                            className="fragment"
                             onClick={() => removeSegmentFromAnswer(index)}
-                            disabled={Boolean(result) || isFixed}
-                            title={isFixed ? "固定済み" : "クリックで戻す"}
+                            disabled={Boolean(result)}
+                            title="クリックで戻す"
                           >
                             {segment.text}
                           </button>
@@ -443,7 +502,7 @@ export default function Home() {
                             <button
                               type="button"
                               onClick={() => moveAnswerSegment(index, "left")}
-                              disabled={Boolean(result) || isFixed || index === 0}
+                              disabled={Boolean(result) || index === 0}
                               aria-label="左へ移動"
                             >
                               ←
@@ -451,7 +510,7 @@ export default function Home() {
                             <button
                               type="button"
                               onClick={() => moveAnswerSegment(index, "right")}
-                              disabled={Boolean(result) || isFixed || index === answerSegments.length - 1}
+                              disabled={Boolean(result) || index === answerSegments.length - 1}
                               aria-label="右へ移動"
                             >
                               →
