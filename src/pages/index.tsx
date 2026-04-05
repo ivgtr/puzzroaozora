@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useGameContext } from "@/contexts/GameContext";
 import { usePuzzleGenerator } from "@/hooks/usePuzzleGenerator";
+import { AppIcon } from "@/components/layout/AppIcon";
 import { PageShell } from "@/components/layout/PageShell";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { DifficultySelector } from "@/components/setup/DifficultySelector";
@@ -18,7 +19,7 @@ export default function Home() {
       <div className="setup-root">
         <header className="setup-header">
           <div className="setup-title">
-            <h1>青空パズル</h1>
+            <h1><AppIcon size={28} className="setup-title-icon" />青空パズル</h1>
             <p>文学作品の語順を記憶と読解で組み直す</p>
           </div>
           <ThemeToggle />

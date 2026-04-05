@@ -25,7 +25,8 @@ export default function App({ Component, pageProps }: AppProps) {
         <meta name="twitter:card" content="summary" />
         <meta name="twitter:title" content={SITE_NAME} />
         <meta name="twitter:description" content={SITE_DESCRIPTION} />
-        <link rel="icon" href="/favicon.ico" />
+        <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+        <link rel="icon" href="/favicon.ico" sizes="48x48" />
       </Head>
       <AppProvider>
         <GameProvider>

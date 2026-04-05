@@ -16,10 +16,18 @@
 }
 
 .setup-title h1 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0;
   font-size: clamp(1.5rem, 3vw, 2rem);
   letter-spacing: 0.05em;
   line-height: 1.2;
+}
+
+.setup-title-icon {
+  flex-shrink: 0;
+  opacity: 0.7;
 }
 
 .setup-title p {
