@@ -45,7 +45,7 @@ export const FIXED_WORKS: FixedWork[] = [
       id: "fixed:harutoshura",
       title: "春と修羅",
       author: "宮沢賢治",
-      kanaType: "旧字旧仮名",
+      kanaType: "新字旧仮名",
     },
     assetPath: "assets/books/harutoshura.txt",
     fallbackContent:
@@ -53,14 +53,14 @@ export const FIXED_WORKS: FixedWork[] = [
   },
   {
     book: {
-      id: "fixed:kasugakyosou",
-      title: "春日狂想",
-      author: "宮沢賢治",
-      kanaType: "旧字旧仮名",
+      id: "fixed:arishihinouta",
+      title: "在りし日の歌",
+      author: "中原中也",
+      kanaType: "新字旧仮名",
     },
-    assetPath: "assets/books/kasugakyosou.txt",
+    assetPath: "assets/books/arishihinouta.txt",
     fallbackContent:
-      "薄明の風が丘をわたり、若い草の匂ひを運んできました。空はやはらかな灰青に澄み、遠くの樹々はまだ眠りの色を残してゐます。",
+      "愛するものが死んだ時には、自殺しなけあなりません。愛するものが死んだ時には、それより他に、方法がない。",
   },
 ];
 
