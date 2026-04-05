@@ -81,7 +81,7 @@ export function normalizeAozoraText(rawText: string): string {
   return cleaned.trim();
 }
 
-export function pickPassageByLength(text: string, minLength: number, maxLength: number, random: () => number): string {
+export function pickPassageByLength(text: string, minLength: number, maxLength: number, random: () => number, excludeText?: string): string {
   const lines = text
     .split(/\n+/)
     .map((line) => line.trim())
@@ -121,6 +121,10 @@ export function pickPassageByLength(text: string, minLength: number, maxLength: 
     return joined.slice(start, start + maxLength).trim();
   }
 
-  const index = Math.floor(random() * candidates.length);
-  return candidates[index];
+  const filtered = candidates.length > 1 && excludeText
+    ? candidates.filter((c) => c !== excludeText)
+    : candidates;
+  const pool = filtered.length > 0 ? filtered : candidates;
+  const index = Math.floor(random() * pool.length);
+  return pool[index];
 }

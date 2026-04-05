@@ -102,9 +102,14 @@ export function toBookSummary(stored: StoredBook): BookSummary {
 export function pickRandomPassage(
   book: StoredBook,
   difficulty: Difficulty,
+  exclude?: string,
 ): string | undefined {
-  const candidates = book.passages.filter((p) => p.difficulty === difficulty);
-  if (candidates.length === 0) return undefined;
-  const index = Math.floor(Math.random() * candidates.length);
-  return candidates[index].encrypted;
+  const all = book.passages.filter((p) => p.difficulty === difficulty);
+  if (all.length === 0) return undefined;
+  const candidates = all.length > 1 && exclude
+    ? all.filter((p) => p.encrypted !== exclude)
+    : all;
+  const pool = candidates.length > 0 ? candidates : all;
+  const index = Math.floor(Math.random() * pool.length);
+  return pool[index].encrypted;
 }

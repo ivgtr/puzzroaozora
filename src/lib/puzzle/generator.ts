@@ -15,6 +15,7 @@ export async function generatePuzzle(options: {
   title?: string;
   author?: string;
   encryptedPassage?: string;
+  excludeText?: string;
 }): Promise<PuzzleData> {
   const seed = options.seed ?? crypto.randomUUID();
   const random = buildSeededRandom(seed);
@@ -36,6 +37,7 @@ export async function generatePuzzle(options: {
       difficultyConfig.textMin,
       difficultyConfig.textMax,
       random,
+      options.excludeText,
     );
     title = content.title;
     author = content.author;

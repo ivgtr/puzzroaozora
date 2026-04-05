@@ -11,6 +11,7 @@ type GenerateBody = {
   title?: string;
   author?: string;
   encryptedPassage?: string;
+  excludeText?: string;
 };
 
 export default async function handler(
@@ -54,6 +55,10 @@ export default async function handler(
       encryptedPassage:
         typeof body.encryptedPassage === "string"
           ? body.encryptedPassage
+          : undefined,
+      excludeText:
+        typeof body.excludeText === "string"
+          ? body.excludeText
           : undefined,
     });
 
