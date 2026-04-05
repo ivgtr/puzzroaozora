@@ -1,27 +1,35 @@
 @import "tailwindcss";
 
-:root {
-  --bg: #fafaf9;
-  --text: #1f2937;
-  --accent: #6f8492;
-  --line: rgba(31, 41, 55, 0.16);
-  --line-strong: rgba(31, 41, 55, 0.28);
-  --surface: rgba(31, 41, 55, 0.04);
-  --surface-strong: rgba(111, 132, 146, 0.12);
+/* --------------------------------
+   Theme: Light — 薄い水色
+   -------------------------------- */
+:root,
+[data-theme="light"] {
+  --bg: #eef4f9;
+  --text: #1e2e3e;
+  --accent: #5f8a9e;
+  --line: rgba(30, 46, 62, 0.10);
+  --line-strong: rgba(30, 46, 62, 0.18);
+  --surface: rgba(95, 138, 158, 0.05);
+  --surface-strong: rgba(95, 138, 158, 0.10);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #121212;
-    --text: #d8d8d8;
-    --accent: #a7bbc6;
-    --line: rgba(216, 216, 216, 0.2);
-    --line-strong: rgba(216, 216, 216, 0.34);
-    --surface: rgba(216, 216, 216, 0.05);
-    --surface-strong: rgba(167, 187, 198, 0.15);
-  }
+/* --------------------------------
+   Theme: Dark — 薄暗い青
+   -------------------------------- */
+[data-theme="dark"] {
+  --bg: #111c28;
+  --text: #c8d5df;
+  --accent: #7da2b7;
+  --line: rgba(200, 213, 223, 0.10);
+  --line-strong: rgba(200, 213, 223, 0.18);
+  --surface: rgba(125, 162, 183, 0.06);
+  --surface-strong: rgba(125, 162, 183, 0.12);
 }
 
+/* --------------------------------
+   Base
+   -------------------------------- */
 * {
   box-sizing: border-box;
 }
@@ -34,14 +42,11 @@ body,
 }
 
 body {
-  background:
-    radial-gradient(circle at 92% 6%, var(--surface-strong), transparent 24%),
-    radial-gradient(circle at 10% 22%, var(--surface), transparent 26%),
-    var(--bg);
+  background: var(--bg);
   color: var(--text);
   font-family: "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
   font-size: 16px;
-  line-height: 1.9;
+  line-height: 1.85;
 }
 
 button,
@@ -51,444 +56,469 @@ input {
   color: inherit;
 }
 
+/* --------------------------------
+   Layout
+   -------------------------------- */
 .aozora-root {
-  width: min(720px, 92vw);
-  margin: 40px auto 56px;
+  width: min(960px, 94vw);
+  margin: 32px auto 48px;
 }
 
-.paper-header {
-  margin-bottom: 26px;
-}
-
-.paper-header h1 {
-  margin: 0;
-  font-size: clamp(2rem, 4.2vw, 2.8rem);
-  line-height: 1.2;
-  letter-spacing: 0.02em;
-}
-
-.paper-header p {
-  margin: 10px 0 0;
-}
-
-.control-panel,
-.game-area,
-.intro-card {
-  padding: 0;
-  border: none;
-  background: transparent;
-}
-
-.control-panel,
-.game-area {
+/* --------------------------------
+   Header
+   -------------------------------- */
+.site-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 20px;
 }
 
-.header-meta {
-  display: flex;
-  gap: 14px;
-  flex-wrap: wrap;
-  margin: 2px 0 10px;
-  color: var(--accent);
+.site-header h1 {
+  margin: 0;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  letter-spacing: 0.05em;
+  line-height: 1.2;
 }
 
-.section-divider {
-  margin: 12px 0 20px;
+.site-header p {
+  margin: 4px 0 0;
+  color: var(--accent);
+  font-size: 0.88rem;
+}
+
+.theme-toggle {
+  appearance: none;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  background: transparent;
+  padding: 3px 10px;
+  font-size: 0.76rem;
+  font-family: "IBM Plex Mono", "JetBrains Mono", "SFMono-Regular", "Menlo", monospace;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  color: var(--accent);
+  white-space: nowrap;
+  transition: opacity 0.2s ease-out;
+}
+
+.theme-toggle:hover {
+  opacity: 0.6;
+}
+
+/* --------------------------------
+   Divider
+   -------------------------------- */
+.divider {
+  margin: 14px 0 16px;
   border: none;
   border-top: 1px solid var(--line);
 }
 
+/* --------------------------------
+   Controls
+   -------------------------------- */
+.controls {
+  margin-bottom: 16px;
+}
+
 .control-row {
-  display: grid;
-  grid-template-columns: minmax(92px, 108px) 1fr;
-  gap: 14px;
+  display: flex;
   align-items: center;
-  margin-bottom: 15px;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
 }
 
 .control-label {
   color: var(--accent);
+  font-size: 0.84rem;
+  font-family: "IBM Plex Mono", "JetBrains Mono", "SFMono-Regular", "Menlo", monospace;
+  letter-spacing: 0.02em;
+  min-width: 52px;
 }
 
 .difficulty-group {
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+  gap: 5px;
 }
 
-.difficulty-button,
-.primary-button,
-.secondary-button {
+/* --------------------------------
+   Buttons
+   -------------------------------- */
+.btn {
   appearance: none;
   border: 1px solid var(--line-strong);
-  border-radius: 8px;
-  background: color-mix(in oklab, var(--bg) 82%, var(--surface));
-  padding: 7px 12px;
+  border-radius: 4px;
+  background: transparent;
+  padding: 5px 14px;
   cursor: pointer;
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.06);
+  font-size: 0.9rem;
   transition:
-    opacity 0.24s ease-out,
-    border-color 0.24s ease-out,
-    background-color 0.24s ease-out,
-    transform 0.22s ease-out;
+    opacity 0.2s ease-out,
+    border-color 0.2s ease-out,
+    background-color 0.2s ease-out;
 }
 
-.difficulty-button:hover,
-.primary-button:hover,
-.secondary-button:hover {
-  opacity: 0.9;
+.btn:hover:not(:disabled) {
+  opacity: 0.8;
   border-color: var(--accent);
-  transform: translateY(-1px);
 }
 
-.difficulty-button.active,
-.primary-button {
+.btn.active,
+.btn-primary {
   border-color: var(--accent);
   background: var(--surface-strong);
 }
 
+.btn-primary {
+  font-weight: 600;
+}
+
 button:disabled {
-  opacity: 0.45;
+  opacity: 0.35;
   cursor: not-allowed;
 }
 
+/* --------------------------------
+   Book Select
+   -------------------------------- */
 .book-select-row {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex: 1;
   flex-wrap: wrap;
 }
 
 .book-select-row select {
-  min-width: min(100%, 440px);
+  flex: 1;
+  min-width: min(100%, 320px);
   border: 1px solid var(--line-strong);
-  border-radius: 8px;
-  background: color-mix(in oklab, var(--bg) 86%, var(--surface));
-  padding: 7px 10px;
+  border-radius: 4px;
+  background: transparent;
+  padding: 5px 10px;
+  font-size: 0.9rem;
 }
 
 .action-row {
-  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-.source-line {
-  margin: 0;
+.source-tag {
   color: var(--accent);
-  font-size: 0.93rem;
+  font-size: 0.74rem;
+  font-family: "IBM Plex Mono", "JetBrains Mono", "SFMono-Regular", "Menlo", monospace;
+  letter-spacing: 0.02em;
 }
 
-.error-text {
-  margin: 0 0 20px;
-  padding: 9px 12px;
-  border-left: 3px solid var(--accent);
-  border-radius: 0 8px 8px 0;
+/* --------------------------------
+   Error
+   -------------------------------- */
+.error-line {
+  margin: 0 0 16px;
+  padding: 8px 12px;
+  border-left: 2px solid var(--accent);
   background: var(--surface);
+  font-size: 0.9rem;
 }
 
+/* --------------------------------
+   Game Status
+   -------------------------------- */
+.game-status {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+  font-size: 0.8rem;
+  color: var(--accent);
+  font-family: "IBM Plex Mono", "JetBrains Mono", "SFMono-Regular", "Menlo", monospace;
+  letter-spacing: 0.02em;
+}
+
+/* --------------------------------
+   Work Meta
+   -------------------------------- */
 .work-meta h2 {
   margin: 0;
-  font-size: clamp(1.5rem, 3vw, 1.9rem);
+  font-size: clamp(1.2rem, 2.2vw, 1.6rem);
   line-height: 1.35;
 }
 
 .work-meta p {
-  margin: 6px 0 0;
+  margin: 4px 0 0;
 }
 
 .work-meta small {
   display: block;
-  margin-top: 6px;
+  margin-top: 3px;
   color: var(--accent);
+  font-size: 0.82rem;
 }
 
-.rich-metrics {
-  margin: 0 0 18px;
-  padding: 13px;
-  border: 1px solid var(--line-strong);
-  border-radius: 8px;
-  background: var(--surface);
+/* --------------------------------
+   Progress
+   -------------------------------- */
+.progress-section {
+  margin-bottom: 16px;
 }
 
-.panel-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.panel-head h3 {
-  margin: 0;
-  font-size: 1rem;
-}
-
-.panel-head span {
-  color: var(--accent);
-  font-size: 0.9rem;
-}
-
-.progress-meter {
-  margin: 10px 0 12px;
-  height: 8px;
-  border-radius: 999px;
-  background: rgba(111, 132, 146, 0.16);
+.progress-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--surface-strong);
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, rgba(111, 132, 146, 0.45), rgba(111, 132, 146, 0.9));
+  background: var(--accent);
+  opacity: 0.6;
   transition: width 0.24s ease-out;
 }
 
-.rich-metrics dt {
-  margin: 0;
-  font-size: 0.78rem;
-  letter-spacing: 0.02em;
+.stats-row {
+  display: flex;
+  gap: 16px;
+  margin-top: 6px;
+  font-size: 0.76rem;
   color: var(--accent);
+  font-family: "IBM Plex Mono", "JetBrains Mono", "SFMono-Regular", "Menlo", monospace;
+  letter-spacing: 0.02em;
 }
 
-.metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-  margin: 0;
+/* --------------------------------
+   Game Board
+   -------------------------------- */
+.game-board {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-bottom: 16px;
 }
 
-.metrics-grid div {
-  border: 1px solid var(--line);
-  padding: 8px;
-}
-
-.metrics-grid dt {
-  margin: 0;
-}
-
-.metrics-grid dd {
-  margin: 4px 0 0;
-  font-size: 0.92rem;
-  word-break: break-word;
-}
-
-.rich-zone {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-  margin-bottom: 18px;
-}
-
-.answer-area,
-.pool-area {
-  margin: 0;
-  padding: 13px;
-  border: 1px solid var(--line-strong);
-  border-radius: 8px;
-  background: var(--surface);
-}
-
-.answer-area h3,
-.pool-area h3 {
-  color: var(--text);
+.section-label {
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+  color: var(--accent);
+  font-family: "IBM Plex Mono", "JetBrains Mono", "SFMono-Regular", "Menlo", monospace;
+  letter-spacing: 0.03em;
 }
 
 .placeholder {
   margin: 0;
-  color: color-mix(in oklab, var(--text) 74%, transparent);
+  color: color-mix(in oklab, var(--text) 35%, transparent);
+  font-size: 0.9rem;
 }
 
-.panel-note {
-  margin: 4px 0 10px;
-  font-size: 0.88rem;
-  color: var(--accent);
+/* --------------------------------
+   Shared fragment style
+   切り取られたテキスト断片の共通表現
+   -------------------------------- */
+.fragment {
+  appearance: none;
+  border: none;
+  background: color-mix(in oklab, var(--accent) 10%, transparent);
+  border-radius: 2px;
+  padding: 1px 5px;
+  cursor: pointer;
+  font-size: inherit;
+  line-height: inherit;
+  box-decoration-break: clone;
+  transition: background-color 0.15s ease-out;
 }
 
-.chips-wrap {
+.fragment:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--accent) 22%, transparent);
+}
+
+.fragment:disabled {
+  cursor: not-allowed;
+}
+
+/* --------------------------------
+   Answer — 再構成される文
+   -------------------------------- */
+.answer-area {
+  min-height: 48px;
+  padding: 10px 14px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 2px;
+  line-height: 2.4;
+  font-size: 0.96rem;
+}
+
+.answer-flow {
   display: flex;
-  gap: 8px;
   flex-wrap: wrap;
   align-items: flex-start;
+  gap: 4px 2px;
 }
 
 .answer-chip-wrap {
   display: inline-flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 1px;
 }
 
-.segment-chip {
-  border: 1px solid var(--line-strong);
-  background: color-mix(in oklab, var(--bg) 88%, var(--surface));
-  border-radius: 8px;
-  padding: 6px 10px;
-  cursor: pointer;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-  transition:
-    opacity 0.24s ease-out,
-    background-color 0.24s ease-out,
-    transform 0.22s ease-out,
-    box-shadow 0.22s ease-out;
+.answer-chip-wrap .fragment {
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
 }
 
-.segment-chip:hover {
-  background: color-mix(in oklab, var(--bg) 74%, var(--surface-strong));
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.09);
+.answer-chip-wrap .fragment:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--accent) 6%, transparent);
 }
 
-.segment-chip[data-pos] {
-  border-left: 3px solid var(--accent);
+.answer-chip-wrap .fragment.fixed {
+  opacity: 0.6;
 }
 
-.pool-area .chips-wrap {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
-  gap: 9px;
+/* --------------------------------
+   Pool — 散らばった断片
+   -------------------------------- */
+.pool-area {
+  border-top: 1px solid var(--line);
+  padding-top: 18px;
+  line-height: 2.4;
+  font-size: 0.96rem;
 }
 
-.pool-chip {
-  min-height: 60px;
-  align-items: flex-start;
-  justify-content: center;
-  text-align: left;
-  display: inline-flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 8px 9px;
+.pool-scatter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 5px 8px;
 }
 
-.chip-main {
-  line-height: 1.35;
-}
-
-.chip-sub {
-  font-family: "IBM Plex Mono", "JetBrains Mono", "SFMono-Regular", "Menlo", monospace;
-  font-size: 0.7rem;
-  letter-spacing: 0.03em;
-  color: var(--accent);
-}
-
-.pool-chip[data-pos="名詞"],
-.pool-chip[data-pos="その他"] {
-  background: rgba(111, 132, 146, 0.11);
-}
-
-.pool-chip[data-pos="動詞"],
-.pool-chip[data-pos="助動詞"] {
-  background: rgba(111, 132, 146, 0.16);
-}
-
-.pool-chip[data-pos="形容詞"],
-.pool-chip[data-pos="副詞"] {
-  background: rgba(111, 132, 146, 0.13);
-}
-
-.pool-chip[data-pos="助詞"],
-.pool-chip[data-pos="接続詞"],
-.pool-chip[data-pos="感動詞"],
-.pool-chip[data-pos="記号"] {
-  background: rgba(111, 132, 146, 0.09);
-}
-
+/* --------------------------------
+   Mini Actions
+   -------------------------------- */
 .mini-actions {
   display: flex;
-  gap: 4px;
+  gap: 2px;
 }
 
 .mini-actions button {
-  width: 24px;
-  height: 24px;
-  border: 1px solid var(--line-strong);
-  border-radius: 6px;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
   background: transparent;
   cursor: pointer;
   line-height: 1;
   padding: 0;
-  transition: opacity 0.24s ease-out;
+  font-size: 0.72rem;
+  color: var(--accent);
+  transition: opacity 0.2s ease-out;
 }
 
-.mini-actions button:hover {
-  opacity: 0.75;
+.mini-actions button:hover:not(:disabled) {
+  opacity: 0.6;
 }
 
+/* --------------------------------
+   Game Actions
+   -------------------------------- */
 .game-actions {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
+/* --------------------------------
+   Result
+   -------------------------------- */
 .result-card {
-  padding: 12px;
-  border: 1px solid var(--line-strong);
-  border-radius: 8px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
   background: var(--surface);
 }
 
 .result-card.ok {
-  border-left: 2px solid var(--accent);
+  border-left: 3px solid var(--accent);
 }
 
 .result-card.ng {
-  border-left: 2px dashed var(--accent);
+  border-left: 3px dashed var(--accent);
 }
 
 .result-card h3 {
-  margin: 0 0 8px;
+  margin: 0 0 6px;
+  font-size: 1rem;
 }
 
 .result-card p {
-  margin: 5px 0;
+  margin: 4px 0;
+  font-size: 0.92rem;
 }
 
 .correct-text {
-  padding-top: 5px;
+  padding-top: 6px;
   border-top: 1px solid var(--line);
+  margin-top: 6px;
 }
 
-.intro-card {
-  border-top: 1px solid var(--line);
-  padding-top: 14px;
+/* --------------------------------
+   Intro
+   -------------------------------- */
+.intro-section {
+  padding-top: 12px;
 }
 
-.intro-card h2 {
-  margin: 0 0 8px;
-  font-size: 1.28rem;
+.intro-section h2 {
+  margin: 0 0 6px;
+  font-size: 1.15rem;
 }
 
-.intro-card p {
+.intro-section p {
   margin: 0;
+  font-size: 0.94rem;
 }
 
+/* --------------------------------
+   Utilities
+   -------------------------------- */
 .mono {
   font-family: "IBM Plex Mono", "JetBrains Mono", "SFMono-Regular", "Menlo", monospace;
-  font-size: 0.86rem;
+  font-size: 0.84rem;
   letter-spacing: 0.02em;
 }
 
+/* --------------------------------
+   Responsive
+   -------------------------------- */
 @media (max-width: 768px) {
   .aozora-root {
-    width: min(96vw, 720px);
-    margin-top: 26px;
-    margin-bottom: 36px;
+    width: min(96vw, 960px);
+    margin-top: 20px;
+    margin-bottom: 32px;
+  }
+
+  .site-header {
+    flex-wrap: wrap;
   }
 
   .control-row {
-    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: flex-start;
     gap: 6px;
-    margin-bottom: 12px;
   }
 
-  .rich-zone {
-    grid-template-columns: 1fr;
+  .stats-row {
+    flex-wrap: wrap;
+    gap: 10px;
   }
 
-  .metrics-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .pool-area .chips-wrap {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .book-select-row {
+    width: 100%;
   }
 
   .book-select-row select {
