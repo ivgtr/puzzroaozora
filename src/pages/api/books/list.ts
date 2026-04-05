@@ -6,7 +6,7 @@ type BooksListData = {
   books: BookSummary[];
   total: number;
   hasMore: boolean;
-  source: "api" | "fallback";
+  source: "fixed" | "api" | "fallback";
 };
 
 function parsePositiveInt(value: string | string[] | undefined, fallback: number): number {
@@ -38,12 +38,17 @@ export default async function handler(
     return;
   }
 
-  const limit = Math.min(parsePositiveInt(req.query.limit, 20), 50);
+  const limit = Math.max(1, Math.min(parsePositiveInt(req.query.limit, 20), 50));
   const offset = parsePositiveInt(req.query.offset, 0);
-  const author = typeof req.query.author === "string" ? req.query.author : undefined;
+  const query =
+    typeof req.query.query === "string"
+      ? req.query.query
+      : typeof req.query.author === "string"
+        ? req.query.author
+        : undefined;
 
   try {
-    const data = await listBooks({ limit, offset, author });
+    const data = await listBooks({ limit, offset, query });
     res.status(200).json({
       success: true,
       data,

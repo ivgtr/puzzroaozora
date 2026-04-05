@@ -1,8 +1,12 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { FALLBACK_BY_ID, FALLBACK_WORKS } from "@/data/fallbackBooks";
+import { FIXED_BY_ID, FIXED_WORKS } from "@/data/fixedBooks";
 import type { LibroSearchResult, LibroWork, LibroWorkContent } from "@/types/libro";
 import type { BookSummary } from "@/types/puzzle";
 
 const DEFAULT_BASE_URL = "http://localhost:8787";
+const fixedContentCache = new Map<string, string>();
 
 function getAozoraApiBaseUrl(): string {
   const base = process.env.AOZORA_API_BASE_URL ?? DEFAULT_BASE_URL;
@@ -49,44 +53,155 @@ function mapWorkToBookSummary(work: LibroWork): BookSummary {
   };
 }
 
+function dedupeWorksById(works: LibroWork[]): LibroWork[] {
+  const seen = new Set<string>();
+  const deduped: LibroWork[] = [];
+  works.forEach((work) => {
+    if (seen.has(work.id)) {
+      return;
+    }
+    seen.add(work.id);
+    deduped.push(work);
+  });
+  return deduped;
+}
+
+function createBookKey(book: Pick<BookSummary, "title" | "author">): string {
+  return `${book.title}::${book.author}`;
+}
+
+function normalizeQuery(query: string | undefined): string {
+  return query?.trim() ?? "";
+}
+
+function matchQuery(book: BookSummary, queryLower: string): boolean {
+  if (queryLower.length === 0) {
+    return true;
+  }
+  return (
+    book.title.toLowerCase().includes(queryLower) ||
+    book.author.toLowerCase().includes(queryLower)
+  );
+}
+
+async function readFixedWorkContent(bookId: string): Promise<string> {
+  const fixed = FIXED_BY_ID.get(bookId);
+  if (!fixed) {
+    throw new Error(`Unknown fixed work id: ${bookId}`);
+  }
+
+  const cached = fixedContentCache.get(bookId);
+  if (cached) {
+    return cached;
+  }
+
+  const absolutePath = path.join(process.cwd(), "public", fixed.assetPath);
+  try {
+    const content = await readFile(absolutePath, "utf8");
+    fixedContentCache.set(bookId, content);
+    return content;
+  } catch {
+    return fixed.fallbackContent;
+  }
+}
+
 export async function listBooks(options: {
   limit: number;
   offset: number;
-  author?: string;
-}): Promise<{ books: BookSummary[]; total: number; hasMore: boolean; source: "api" | "fallback" }> {
+  query?: string;
+}): Promise<{ books: BookSummary[]; total: number; hasMore: boolean; source: "fixed" | "api" | "fallback" }> {
+  const fixedBooks = FIXED_WORKS.map((work) => work.book);
+  const query = normalizeQuery(options.query);
+  const safeLimit = Math.max(1, options.limit);
+  const queryLower = query.toLowerCase();
+
+  if (query.length === 0) {
+    return {
+      books: fixedBooks,
+      total: fixedBooks.length,
+      hasMore: false,
+      source: "fixed",
+    };
+  }
+
+  const fixedBookKeys = new Set(fixedBooks.map((book) => createBookKey(book)));
+
   try {
-    const page = Math.floor(options.offset / options.limit) + 1;
-    const result = await fetchLibro<LibroSearchResult<LibroWork>>("/works", {
+    const page = Math.floor(options.offset / safeLimit) + 1;
+    const titleResult = await fetchLibro<LibroSearchResult<LibroWork>>("/works", {
       page: String(page),
-      per_page: String(options.limit),
+      per_page: String(safeLimit),
       copyright: "false",
-      author: options.author ?? "",
+      title: query,
       sort: "updated_at",
       order: "desc",
     });
 
+    let mergedItems = titleResult.items;
+    let mergedTotal = titleResult.total;
+
+    if (mergedItems.length < safeLimit) {
+      const authorResult = await fetchLibro<LibroSearchResult<LibroWork>>("/works", {
+        page: String(page),
+        per_page: String(safeLimit),
+        copyright: "false",
+        author: query,
+        sort: "updated_at",
+        order: "desc",
+      });
+      mergedItems = dedupeWorksById([...titleResult.items, ...authorResult.items]);
+      mergedTotal = Math.max(titleResult.total, authorResult.total);
+    }
+
+    const seenIds = new Set<string>();
+    const dynamicBooks: BookSummary[] = [];
+    mergedItems.forEach((work) => {
+      const mapped = mapWorkToBookSummary(work);
+      const key = createBookKey(mapped);
+      if (fixedBookKeys.has(key) || seenIds.has(mapped.id)) {
+        return;
+      }
+      seenIds.add(mapped.id);
+      dynamicBooks.push(mapped);
+    });
+
     return {
-      books: result.items.map(mapWorkToBookSummary),
-      total: result.total,
-      hasMore: options.offset + result.items.length < result.total,
+      books: [...fixedBooks, ...dynamicBooks],
+      total: fixedBooks.length + mergedTotal,
+      hasMore: options.offset + mergedItems.length < mergedTotal,
       source: "api",
     };
   } catch {
-    const filtered = options.author
-      ? FALLBACK_WORKS.filter((work) => work.book.author.includes(options.author ?? ""))
-      : FALLBACK_WORKS;
-    const sliced = filtered.slice(options.offset, options.offset + options.limit);
+    const filtered = FALLBACK_WORKS.filter((work) => {
+      const key = createBookKey(work.book);
+      if (fixedBookKeys.has(key)) {
+        return false;
+      }
+      return matchQuery(work.book, queryLower);
+    });
+    const sliced = filtered.slice(options.offset, options.offset + safeLimit);
 
     return {
-      books: sliced.map((work) => work.book),
-      total: filtered.length,
+      books: [...fixedBooks, ...sliced.map((work) => work.book)],
+      total: fixedBooks.length + filtered.length,
       hasMore: options.offset + sliced.length < filtered.length,
       source: "fallback",
     };
   }
 }
 
-export async function getBookContent(bookId: string): Promise<{ title: string; author: string; text: string; source: "api" | "fallback" }> {
+export async function getBookContent(bookId: string): Promise<{ title: string; author: string; text: string; source: "fixed" | "api" | "fallback" }> {
+  const fixed = FIXED_BY_ID.get(bookId);
+  if (fixed) {
+    const text = await readFixedWorkContent(bookId);
+    return {
+      title: fixed.book.title,
+      author: fixed.book.author,
+      text,
+      source: "fixed",
+    };
+  }
+
   try {
     const [work, content] = await Promise.all([
       fetchLibro<LibroWork>(`/works/${encodeURIComponent(bookId)}`),
@@ -104,11 +219,22 @@ export async function getBookContent(bookId: string): Promise<{ title: string; a
       source: "api",
     };
   } catch {
-    const fallback = FALLBACK_BY_ID.get(bookId) ?? FALLBACK_WORKS[0];
+    const fallback = FALLBACK_BY_ID.get(bookId);
+    if (fallback) {
+      return {
+        title: fallback.book.title,
+        author: fallback.book.author,
+        text: fallback.content,
+        source: "fallback",
+      };
+    }
+
+    const defaultFixed = FIXED_WORKS[0];
+    const text = await readFixedWorkContent(defaultFixed.book.id);
     return {
-      title: fallback.book.title,
-      author: fallback.book.author,
-      text: fallback.content,
+      title: defaultFixed.book.title,
+      author: defaultFixed.book.author,
+      text,
       source: "fallback",
     };
   }
