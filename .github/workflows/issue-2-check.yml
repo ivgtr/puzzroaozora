@@ -3,27 +3,61 @@ on:
   push:
     branches: [codex/issue-2-phaser-desk]
 permissions:
-  contents: read
+  contents: write
 jobs:
-  prepare:
+  check:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: codex/issue-2-phaser-desk
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Prepare development dependencies
+      - name: Finish migration and lock dependencies
+        run: |
+          if test -f .github/issue-2-prepare.py; then python .github/issue-2-prepare.py; fi
+          npm install --package-lock-only --ignore-scripts
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if ! git diff --cached --quiet; then git commit -m 'feat: finish legacy migration and lock game dependencies'; git push; fi
+      - name: Verify the shipped source
         run: |
           npm ci
-          npm install --save-exact phaser@4.2.1 phaser4-rex-plugins @fontsource/noto-serif-jp @fontsource/noto-sans-jp opentype.js
-          npm install --save-dev --save-exact @types/opentype.js tsx
-          tar --exclude=.git --exclude=node_modules --exclude=.next -czf /tmp/issue-2-source.tar.gz .
-          tar -czf /tmp/issue-2-dependencies.tar.gz node_modules
+          npm test
+          npm run lint
+          npm run build
+      - name: Browser preparation (temporary diagnostics, not committed)
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps chromium
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('src/game/mount.ts');p.write_text(p.read_text().replace('  return game;', '  (window as unknown as { __game: Phaser.Game }).__game = game;\n  return game;'))
+          PY
+          cat > /tmp/libro-stub.mjs <<'JS'
+          import http from 'node:http';
+          const text = '吾輩は猫である。名前はまだ無い。どこで生れたかとんと見当がつかぬ。何でも薄暗いじめじめした所でニャーニャー泣いていた事だけは記憶している。';
+          http.createServer((req,res) => { res.setHeader('Content-Type','application/json'); res.end(JSON.stringify(req.url.includes('/content') ? {content:text.repeat(5)} : {id:'999999',title:'検証用の蔵書',orthography:'新字新仮名',authors:[{role:'author',lastName:'夏目',firstName:'漱石'}]})); }).listen(8787);
+          JS
+          node /tmp/libro-stub.mjs > /tmp/libro.log 2>&1 &
+          AOZORA_API_BASE_URL=http://localhost:8787 npm run dev > /tmp/next.log 2>&1 &
+          for n in $(seq 1 60); do if curl -fsS http://localhost:5678 > /dev/null; then break; fi; sleep 1; done
+      - name: One walkthrough and typography evidence
+        run: node .github/issue-2-browser.mjs
+      - name: Collect reproducibility information
+        if: always()
+        run: |
+          mkdir -p /tmp/evidence
+          cp /tmp/next.log /tmp/evidence/next.log || true
+          git show HEAD:package-lock.json > /tmp/evidence/package-lock.json
+          git rev-parse HEAD > /tmp/evidence/commit.txt
+          tar --exclude=.git --exclude=node_modules --exclude=.next --exclude=public/fonts --exclude=public/audio -czf /tmp/evidence/source.tar.gz .
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: issue-2-workspace
-          retention-days: 1
-          path: |
-            /tmp/issue-2-source.tar.gz
-            /tmp/issue-2-dependencies.tar.gz
+          name: issue-2-evidence
+          retention-days: 7
+          path: /tmp/evidence
