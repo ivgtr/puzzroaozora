@@ -1,0 +1,29 @@
+name: Issue 2 isolated validation
+on:
+  push:
+    branches: [codex/issue-2-phaser-desk]
+permissions:
+  contents: read
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Prepare development dependencies
+        run: |
+          npm ci
+          npm install --save-exact phaser@4.2.1 phaser4-rex-plugins @fontsource/noto-serif-jp @fontsource/noto-sans-jp opentype.js
+          npm install --save-dev --save-exact @types/opentype.js tsx
+          tar --exclude=.git --exclude=node_modules --exclude=.next -czf /tmp/issue-2-source.tar.gz .
+          tar -czf /tmp/issue-2-dependencies.tar.gz node_modules
+      - uses: actions/upload-artifact@v4
+        with:
+          name: issue-2-workspace
+          retention-days: 1
+          path: |
+            /tmp/issue-2-source.tar.gz
+            /tmp/issue-2-dependencies.tar.gz
