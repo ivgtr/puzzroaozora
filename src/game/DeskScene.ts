@@ -19,6 +19,7 @@ interface ButtonAction { label: string; invoke: () => void; bounds: Phaser.Geom.
 
 export class DeskScene extends Phaser.Scene {
   private bridge: HostBridge;
+  private onReady: () => void;
   private world!: Phaser.GameObjects.Container;
   private hud!: Phaser.GameObjects.Container;
   private ports!: Phaser.GameObjects.Graphics;
@@ -52,7 +53,7 @@ export class DeskScene extends Phaser.Scene {
   private serial = 0;
   private alive = true;
 
-  constructor(bridge: HostBridge) { super({ key: "Desk" }); this.bridge = bridge; }
+  constructor(bridge: HostBridge, onReady: () => void) { super({ key: "Desk" }); this.bridge = bridge; this.onReady = onReady; }
   private get w(): number { return this.scale.width; }
   private get h(): number { return this.scale.height; }
   private get top(): number { return this.h < 450 ? 110 : 138; }
@@ -86,6 +87,7 @@ export class DeskScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.shutdown, this);
     this.resize();
     void this.loadBooks();
+    this.onReady();
   }
 
   private shutdown(): void {
@@ -518,7 +520,10 @@ export class DeskScene extends Phaser.Scene {
     if (this.target) this.ports.lineStyle(3 / zoom, 0xe4bd6d).strokeCircle(this.target.point.x, this.target.point.y, 22 / zoom);
   }
 
-  private worldPoint(pointer: Point): Phaser.Math.Vector2 { return this.boardCamera.getWorldPoint(pointer.x, pointer.y); }
+  private worldPoint(pointer: Point): Phaser.Math.Vector2 {
+    this.boardCamera.preRender();
+    return this.boardCamera.getWorldPoint(pointer.x, pointer.y);
+  }
   private onBoard(pointer: Point): boolean { return pointer.y >= this.top && pointer.y < this.h - 60; }
   private touching(): Phaser.Input.Pointer[] { return this.input.manager.pointers.filter((pointer) => pointer.isDown && this.onBoard(pointer)); }
   private hitPaper(point: Point): { id: string; paper: Paper } | undefined {

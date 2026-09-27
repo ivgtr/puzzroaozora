@@ -8,7 +8,11 @@ export async function startGame(parent: HTMLElement, bridge: HostBridge, signal:
   await prepareFont(UI_TEXT + PASSAGES.map((passage) => passage.title + passage.author + passage.original.slice(0, 30)).join(""), "DeskSans");
   signal.throwIfAborted();
   return new Promise((resolve, reject) => {
-    const scene = new DeskScene(bridge);
+    const scene = new DeskScene(bridge, () => queueMicrotask(() => {
+      if (stopped) return;
+      clearTimeout(timeout); booted = true;
+      resolve({ dispatch: (id) => scene.dispatch(id), focus: (id) => scene.focus(id), destroy });
+    }));
     let game: Phaser.Game | undefined;
     let stopped = false;
     let booted = false;
@@ -24,11 +28,6 @@ export async function startGame(parent: HTMLElement, bridge: HostBridge, signal:
       destroy(); reject(new Error("ゲームを起動できませんでした。WebGLの有効化とブラウザの設定を確認して再試行してください。"));
     }, 15000);
     signal.addEventListener("abort", abort, { once: true });
-    scene.events.once(Phaser.Scenes.Events.CREATE, () => queueMicrotask(() => {
-      if (stopped) return;
-      clearTimeout(timeout); booted = true;
-      resolve({ dispatch: (id) => scene.dispatch(id), focus: (id) => scene.focus(id), destroy });
-    }));
     try {
       game = new Phaser.Game({
         type: Phaser.WEBGL,
