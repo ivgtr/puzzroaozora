@@ -1,0 +1,38 @@
+name: Implementation workspace (temporary)
+on:
+  push:
+    branches: [codex/issue-1-manuscript-desk]
+    paths: [.github/workflows/implementation-workspace.yml]
+permissions:
+  contents: write
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/issue-1-manuscript-desk
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Resolve and lock game dependencies
+        run: |
+          npm install --save-exact phaser@4.2.1
+          npm install --save-dev --save-exact @fontsource/noto-serif-jp @fontsource/noto-sans-jp fontkit @types/fontkit
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package.json package-lock.json
+          git diff --cached --quiet || git commit -m 'build: lock Phaser and Japanese font tooling'
+          git push origin HEAD:codex/issue-1-manuscript-desk
+      - name: Package source and dependencies for isolated validation
+        run: |
+          git ls-files -z | tar --null -T - -czf /tmp/source.tgz
+          tar -czf /tmp/dependencies.tgz node_modules
+      - uses: actions/upload-artifact@v4
+        with:
+          name: implementation-workspace
+          path: |
+            /tmp/source.tgz
+            /tmp/dependencies.tgz
+          retention-days: 1
