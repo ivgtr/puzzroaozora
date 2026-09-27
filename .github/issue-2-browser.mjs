@@ -38,6 +38,7 @@ for (const config of [{ name: 'desktop', width: 1280, height: 900, dpr: 1 }, { n
     if (config.name === 'desktop') {
       const first = state[0], second = state[1];
       await page.mouse.move(first.x + 30, first.y + 25); await page.mouse.down(); await page.mouse.move(first.x + 65, first.y + 80, { steps: 10 }); await page.mouse.up();
+      await page.waitForTimeout(100);
       const moved = await page.evaluate((id) => { const paper = window.__game.scene.getScene('Desk').papers.get(id); return { x: paper.root.x, y: paper.root.y }; }, first.id);
       assert.ok(Math.abs(moved.y - (first.y - 100)) > 20, 'drag moves the selected paper');
       await page.mouse.click(moved.x + 25, moved.y + 125);
