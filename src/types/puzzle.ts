@@ -31,28 +31,6 @@ export interface PuzzleData {
   difficulty: Difficulty;
   textLength: number;
   createdAt: string;
-  fixedSegmentId?: string;
-  answerToken: string;
-}
-
-export interface AnswerData {
-  puzzleId: string;
-  userAnswer: string[];
-  startedAt: string;
-  submittedAt: string;
-  timeSpent: number;
-  answerToken: string;
-}
-
-export interface ResultData {
-  puzzleId: string;
-  isCorrect: boolean;
-  score: number;
-  correctPositions: number;
-  totalSegments: number;
-  timeBonusScore: number;
-  feedback: string;
-  correctText: string;
 }
 
 export interface BookSummary {

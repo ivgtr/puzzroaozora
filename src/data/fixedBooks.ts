@@ -3,7 +3,6 @@ import type { BookSummary } from "@/types/puzzle";
 export type FixedWork = {
   book: BookSummary;
   assetPath: string;
-  fallbackContent: string;
 };
 
 export const FIXED_WORKS: FixedWork[] = [
@@ -15,8 +14,6 @@ export const FIXED_WORKS: FixedWork[] = [
       kanaType: "新字新仮名",
     },
     assetPath: "assets/books/lemon.txt",
-    fallbackContent:
-      "えたいの知れない不吉な塊が私の心を始終押えつけていた。焦躁とも不安ともつかぬその塊は、私を街へ追い出した。私は京都の町をあてもなく歩き、丸善の店先で足を止めた。",
   },
   {
     book: {
@@ -26,8 +23,6 @@ export const FIXED_WORKS: FixedWork[] = [
       kanaType: "新字新仮名",
     },
     assetPath: "assets/books/gingatetsudo.txt",
-    fallbackContent:
-      "ではみなさんは、そういうふうに川だと言いながら、ほんとうはそれが天の川だということを知っているのでした。ジョバンニは、まるで鉄砲玉のように立ちあがって、窓の外を見ました。",
   },
   {
     book: {
@@ -37,8 +32,6 @@ export const FIXED_WORKS: FixedWork[] = [
       kanaType: "新字新仮名",
     },
     assetPath: "assets/books/wagahai.txt",
-    fallbackContent:
-      "吾輩は猫である。名前はまだ無い。どこで生れたかとんと見当がつかぬ。何でも薄暗いじめじめした所でニャーニャー泣いていた事だけは記憶している。",
   },
   {
     book: {
@@ -48,8 +41,6 @@ export const FIXED_WORKS: FixedWork[] = [
       kanaType: "新字旧仮名",
     },
     assetPath: "assets/books/harutoshura.txt",
-    fallbackContent:
-      "わたくしといふ現象は、仮定された有機交流電燈のひとつの青い照明です。風景やみんなといっしょに、せはしくせはしく明滅しながら、いかにもたしかにともりつづける因果交流電燈です。",
   },
   {
     book: {
@@ -59,8 +50,6 @@ export const FIXED_WORKS: FixedWork[] = [
       kanaType: "新字旧仮名",
     },
     assetPath: "assets/books/arishihinouta.txt",
-    fallbackContent:
-      "愛するものが死んだ時には、自殺しなけあなりません。愛するものが死んだ時には、それより他に、方法がない。",
   },
 ];
 

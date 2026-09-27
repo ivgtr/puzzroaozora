@@ -114,9 +114,8 @@ export class DeskScene extends Phaser.Scene {
     if (change) this.play(change.completed ? 'complete' : change.confirmed ? 'join' : 'place');
   }
   private deal() {
-    const session = this.controller.session!;
     this.positions.clear(); this.columns = this.scale.width < 600 ? 8 : 12;
-    const shuffled = Phaser.Utils.Array.Shuffle([...session.chains]);
+    const shuffled = this.controller.getSnapshot().chains;
     const shelfWidth = Math.max(800, this.scale.width * 1.25);
     let x = 66, y = 50, rowHeight = 0;
     for (const chain of shuffled) {

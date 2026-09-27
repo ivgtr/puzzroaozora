@@ -62,13 +62,9 @@ async function readFixedWorkContent(bookId: string): Promise<string> {
   }
 
   const absolutePath = path.join(process.cwd(), "public", fixed.assetPath);
-  try {
-    const content = await readFile(absolutePath, "utf8");
-    fixedContentCache.set(bookId, content);
-    return content;
-  } catch {
-    return fixed.fallbackContent;
-  }
+  const content = await readFile(absolutePath, "utf8");
+  fixedContentCache.set(bookId, content);
+  return content;
 }
 
 export async function getBookContent(bookId: string): Promise<{

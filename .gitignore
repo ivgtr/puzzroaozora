@@ -40,3 +40,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Generated from locked font packages and original audio synthesis
+/public/fonts/
+/public/audio/

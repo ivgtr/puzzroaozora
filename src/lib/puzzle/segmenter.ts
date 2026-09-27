@@ -1,6 +1,8 @@
 import type { Difficulty, PartOfSpeech, PuzzleSegment } from "@/types/puzzle";
 import { DIFFICULTY_CONFIG } from "@/lib/puzzle/difficulty";
 
+const graphemes = (text: string) => [...new Intl.Segmenter("ja", { granularity: "grapheme" }).segment(text)].map((item) => item.segment);
+
 const PARTICLES = new Set([
   "は",
   "が",
@@ -42,7 +44,7 @@ function getRandomInt(min: number, max: number, random: () => number): number {
 
 function splitToChunks(text: string, difficulty: Difficulty, random: () => number): string[] {
   const config = DIFFICULTY_CONFIG[difficulty];
-  const chars = [...text.replace(/\s+/g, "")];
+  const chars = graphemes(text.replace(/\r\n?|\n/g, ""));
 
   const chunks: string[] = [];
   let index = 0;
@@ -100,8 +102,8 @@ function splitLongestChunk(chunks: string[]): string[] {
   let maxLength = 0;
 
   for (let i = 0; i < chunks.length; i += 1) {
-    if (chunks[i].length > maxLength) {
-      maxLength = chunks[i].length;
+    if (graphemes(chunks[i]).length > maxLength) {
+      maxLength = graphemes(chunks[i]).length;
       maxIndex = i;
     }
   }
@@ -110,10 +112,10 @@ function splitLongestChunk(chunks: string[]): string[] {
     return chunks;
   }
 
-  const chunk = chunks[maxIndex];
+  const chunk = graphemes(chunks[maxIndex]);
   const mid = Math.floor(chunk.length / 2);
   const result = [...chunks];
-  result.splice(maxIndex, 1, chunk.slice(0, mid), chunk.slice(mid));
+  result.splice(maxIndex, 1, chunk.slice(0, mid).join(""), chunk.slice(mid).join(""));
   return result;
 }
 

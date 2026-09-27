@@ -1,5 +1,4 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { parseDifficulty } from "@/lib/puzzle/difficulty";
 import { generatePuzzle } from "@/lib/puzzle/generator";
 import { PassageDecryptionError } from "@/lib/puzzle/passageCrypto";
 import type { ApiResponse, PuzzleData } from "@/types/puzzle";
@@ -31,7 +30,11 @@ export default async function handler(
   }
 
   const body = req.body as GenerateBody;
-  const difficulty = parseDifficulty(body.difficulty);
+  if (body.difficulty !== "easy" && body.difficulty !== "normal") {
+    res.status(400).json({ success: false, error: { code: "INVALID_DIFFICULTY", message: "現在はEasyとNormalで遊べます。" } });
+    return;
+  }
+  const difficulty = body.difficulty;
   const bookId = body.bookId;
 
   if (!bookId || typeof bookId !== "string") {

@@ -7,8 +7,6 @@ export type DifficultyConfig = {
   maxSegments: number;
   minChunk: number;
   maxChunk: number;
-  showFixedFirstSegment: boolean;
-  targetTimeSeconds: number;
 };
 
 export const DIFFICULTY_CONFIG: Record<Difficulty, DifficultyConfig> = {
@@ -19,8 +17,6 @@ export const DIFFICULTY_CONFIG: Record<Difficulty, DifficultyConfig> = {
     maxSegments: 14,
     minChunk: 3,
     maxChunk: 5,
-    showFixedFirstSegment: true,
-    targetTimeSeconds: 140,
   },
   normal: {
     textMin: 45,
@@ -29,8 +25,6 @@ export const DIFFICULTY_CONFIG: Record<Difficulty, DifficultyConfig> = {
     maxSegments: 18,
     minChunk: 2,
     maxChunk: 4,
-    showFixedFirstSegment: false,
-    targetTimeSeconds: 120,
   },
   hard: {
     textMin: 30,
@@ -39,14 +33,6 @@ export const DIFFICULTY_CONFIG: Record<Difficulty, DifficultyConfig> = {
     maxSegments: 24,
     minChunk: 1,
     maxChunk: 3,
-    showFixedFirstSegment: false,
-    targetTimeSeconds: 100,
   },
 };
 
-export function parseDifficulty(value: string | undefined): Difficulty {
-  if (value === "easy" || value === "normal" || value === "hard") {
-    return value;
-  }
-  return "normal";
-}

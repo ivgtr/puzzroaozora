@@ -100,8 +100,10 @@ export class PuzzleSession {
       const chain = this.currentChains.find((item) => item.id === command.chain);
       const boundary = command.boundary;
       if (!chain || !Number.isInteger(boundary) || boundary < 0 || boundary >= chain.confirmed.length || chain.confirmed[boundary]) return null;
-      const left: Chain = { id: chain.id, pieces: chain.pieces.slice(0, boundary + 1), confirmed: chain.confirmed.slice(0, boundary) };
-      const right: Chain = { id: chain.pieces[boundary + 1], pieces: chain.pieces.slice(boundary + 1), confirmed: chain.confirmed.slice(boundary + 1) };
+      const leftPieces = chain.pieces.slice(0, boundary + 1), rightPieces = chain.pieces.slice(boundary + 1);
+      // The chain ID belongs to one of its pieces, which may not be first after prepending.
+      const left: Chain = { id: leftPieces.includes(chain.id) ? chain.id : leftPieces[0], pieces: leftPieces, confirmed: chain.confirmed.slice(0, boundary) };
+      const right: Chain = { id: rightPieces.includes(chain.id) ? chain.id : rightPieces[0], pieces: rightPieces, confirmed: chain.confirmed.slice(boundary + 1) };
       this.currentChains = this.currentChains.flatMap((item) => item.id === chain.id ? [left, right] : [item]);
       return { kind: "split", added: [left.id, right.id], removed: [chain.id], confirmed: false, completed: false };
     }

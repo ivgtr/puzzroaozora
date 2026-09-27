@@ -30,6 +30,11 @@ test("Easy confirms two; wrong joins preserve internal locks and only temporary 
   assert.equal(join(s, "4", "0")?.confirmed, false);
   assert.deepEqual(s.chains.find((c) => c.id === "0")?.confirmed, [true, false, true]);
   assert.equal(s.dispatch({ type: "split", chain: "0", boundary: 0 }), null);
+  const prepended = game(["A", "B", "C"]);
+  join(prepended, "0", "1", "before");
+  prepended.dispatch({ type: "split", chain: "1", boundary: 0 });
+  assert.equal(new Set(prepended.chains.map((chain) => chain.id)).size, 3);
+  assert.equal(join(prepended, "0", "1", "before")?.kind, "join");
   assert.ok(s.dispatch({ type: "split", chain: "0", boundary: 1 }));
   assert.deepEqual(s.chains.map((c) => c.pieces).flat().sort(), ["0", "1", "2", "3", "4", "5"]);
 });

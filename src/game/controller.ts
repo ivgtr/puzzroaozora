@@ -35,6 +35,7 @@ export class DeskController {
   private disposed = false;
   private lastChoice?: Choice;
   private lastPassage?: string;
+  private displayOrder = new Map<string, number>();
   private snapshot: Snapshot = this.makeSnapshot();
 
   private choices(): Choice[] {
@@ -52,7 +53,7 @@ export class DeskController {
       title: session?.puzzle.title ?? '', author: session?.puzzle.author ?? '',
       original: readable ? session?.puzzle.originalText : undefined,
       source: readable ? session?.puzzle.source : undefined,
-      chains: this.view === 'assembling' && session ? session.chains.map((chain) => ({ id: chain.id, text: session.text(chain), boundaries: chain.confirmed })) : [],
+      chains: this.view === 'assembling' && session ? [...session.chains].sort((a, b) => this.displayOrder.get(a.id)! - this.displayOrder.get(b.id)!).map((chain) => ({ id: chain.id, text: session.text(chain), boundaries: chain.confirmed })) : [],
       selected: this.selected, muted: this.muted, error: this.error, importOpen: this.importOpen,
       importing: this.importing, announcement: this.announcement,
     };
@@ -126,6 +127,11 @@ export class DeskController {
       await Promise.all([prepareText(puzzle.originalText), prepareText(`${puzzle.title}${puzzle.author}`, true)]);
       if (this.disposed || revision !== this.revision) return;
       this.session = new PuzzleSession(puzzle, this.difficulty);
+      const order = puzzle.pieces.map((piece) => piece.id);
+      for (let i = order.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]];
+      }
+      this.displayOrder = new Map(order.map((id, index) => [id, index]));
       this.lastPassage = usedPassage; this.view = 'reading'; this.publish();
     } catch (error) { if (!this.disposed && revision === this.revision) this.fail(error); }
   }
