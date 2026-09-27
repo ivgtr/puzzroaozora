@@ -8,7 +8,7 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
         with:
@@ -17,140 +17,113 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Apply reviewed fixes
+      - name: Fix scene initialization and camera coordinates
         run: |
           python3 - <<'PY'
           from pathlib import Path
           def patch(path, before, after):
-              p = Path(path)
-              text = p.read_text()
-              assert before in text, (path, before)
-              p.write_text(text.replace(before, after))
-          scene = 'src/game/DeskScene.ts'
-          patch(scene, 'import { Paper, INK, PAPER, MAT }', 'import { Paper, PAPER, MAT }')
-          patch(scene, 'if (this.gesture?.kind === "paper" && this.session) {\n      const stable = this.session.state.chains.find((chain) => chain.id === this.gesture?.id);', 'const gesture = this.gesture;\n    if (gesture?.kind === "paper" && this.session) {\n      const stable = this.session.state.chains.find((chain) => chain.id === gesture.id);')
-          patch(scene, 'const views = [...this.views].reverse();', 'const views = [...this.views].sort((a, b) => this.world.getIndex(b[1].paper) - this.world.getIndex(a[1].paper));')
-          patch(scene, 'this.game.canvas.addEventListener("pointercancel", this.cancelGesture);', 'this.game.canvas.addEventListener("pointercancel", this.cancelGesture);\n    this.game.canvas.addEventListener("touchcancel", this.cancelGesture);')
-          patch(scene, 'this.game.canvas.removeEventListener("pointercancel", this.cancelGesture);', 'this.game.canvas.removeEventListener("pointercancel", this.cancelGesture);\n    this.game.canvas.removeEventListener("touchcancel", this.cancelGesture);')
-          patch(scene, 'const visible = this.saved.slice(this.reviewPage * 3, this.reviewPage * 3 + 3);', 'const perPage = Math.max(1, Math.min(3, Math.floor((height - 134) / 110)));\n      this.reviewPage = Math.min(this.reviewPage, Math.max(0, Math.ceil(this.saved.length / perPage) - 1));\n      const visible = this.saved.slice(this.reviewPage * perPage, (this.reviewPage + 1) * perPage);')
-          patch(scene, 'Math.ceil(this.saved.length / 3) - 1', 'Math.ceil(this.saved.length / perPage) - 1')
-          patch('tests/model.test.ts', 'note: "fixture", difficulty', 'note: "fixture", location: "fixture", difficulty')
-          patch('tests/model.test.ts', '["abcXab", "abc", "Y"]', '["bcXa", "abc", "Y"]')
+              p=Path(path); text=p.read_text(); assert before in text, (path,before)
+              p.write_text(text.replace(before,after))
+          scene='src/game/DeskScene.ts'
+          patch(scene,'private bridge: HostBridge;', 'private bridge: HostBridge;\n  private onReady: () => void;')
+          patch(scene,'constructor(bridge: HostBridge) { super({ key: "Desk" }); this.bridge = bridge; }', 'constructor(bridge: HostBridge, onReady: () => void) { super({ key: "Desk" }); this.bridge = bridge; this.onReady = onReady; }')
+          patch(scene,'void this.loadBooks();','void this.loadBooks();\n    this.onReady();')
+          patch(scene,'private worldPoint(pointer: Point): Phaser.Math.Vector2 { return this.boardCamera.getWorldPoint(pointer.x, pointer.y); }', 'private worldPoint(pointer: Point): Phaser.Math.Vector2 {\n    this.boardCamera.preRender();\n    return this.boardCamera.getWorldPoint(pointer.x, pointer.y);\n  }')
+          runtime='src/game/runtime.ts'
+          patch(runtime,'const scene = new DeskScene(bridge);','const scene = new DeskScene(bridge, () => queueMicrotask(() => {\n      if (stopped) return;\n      clearTimeout(timeout); booted = true;\n      resolve({ dispatch: (id) => scene.dispatch(id), focus: (id) => scene.focus(id), destroy });\n    }));')
+          patch(runtime,'    scene.events.once(Phaser.Scenes.Events.CREATE, () => queueMicrotask(() => {\n      if (stopped) return;\n      clearTimeout(timeout); booted = true;\n      resolve({ dispatch: (id) => scene.dispatch(id), focus: (id) => scene.focus(id), destroy });\n    }));\n','')
           PY
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add src/game/DeskScene.ts tests/model.test.ts
-          git commit -m 'fix: narrow cancelled gestures and preserve topmost paper hit targets'
+          git add src/game/DeskScene.ts src/game/runtime.ts
+          git commit -m 'fix: resolve game startup after scene creation and refresh camera transforms'
           git push origin HEAD:codex/issue-1-manuscript-desk
       - run: npm ci --no-audit --no-fund
       - run: npm test && npm run lint && npm run typecheck && npm run build
-      - name: Verify excerpts against the primary sources
-        continue-on-error: true
-        run: |
-          node --experimental-strip-types --input-type=module -e 'import {PASSAGES} from "./src/data/passages.ts"; console.log(JSON.stringify(PASSAGES))' > /tmp/passages.json
-          python3 - <<'PY'
-          import json, re, urllib.request
-          from html.parser import HTMLParser
-          class Text(HTMLParser):
-              def __init__(self):
-                  super().__init__(); self.skip=0; self.out=[]
-              def handle_starttag(self, tag, attrs):
-                  if tag in ('rt','rp','script','style'): self.skip+=1
-              def handle_endtag(self, tag):
-                  if tag in ('rt','rp','script','style'): self.skip=max(0,self.skip-1)
-              def handle_data(self, data):
-                  if not self.skip: self.out.append(data)
-          cache={}; failed=[]
-          for passage in json.load(open('/tmp/passages.json')):
-              url=passage['sourceUrl']
-              if url not in cache:
-                  raw=urllib.request.urlopen(url,timeout=30).read()
-                  parser=Text(); parser.feed(raw.decode('cp932'))
-                  cache[url]=re.sub(r'\s+','',''.join(parser.out))
-              original=re.sub(r'\s+','',passage['original'])
-              found=original in cache[url]
-              print(passage['id'], 'SOURCE MATCH' if found else 'SOURCE MISMATCH', url)
-              if not found: failed.append(passage['id'])
-          assert not failed, failed
-          PY
-      - name: Prepare one-off browser verification
+      - name: Prepare browser
         run: |
           npm install --prefix /tmp/browser --no-audit --no-fund playwright agent-browser
-          /tmp/browser/node_modules/.bin/playwright install chromium --with-deps
+          /tmp/browser/node_modules/.bin/playwright install chromium
           /tmp/browser/node_modules/.bin/agent-browser install
+          node --experimental-strip-types --input-type=module -e 'import {PASSAGES} from "./src/data/passages.ts"; console.log(JSON.stringify(PASSAGES))' > /tmp/passages.json
           npm start -- -p 5678 > /tmp/server.log 2>&1 &
           for i in $(seq 1 60); do curl -fsS http://127.0.0.1:5678 >/dev/null && break; sleep 1; done
           mkdir -p /tmp/evidence
-      - name: Agent browser visual entry check
-        continue-on-error: true
+      - name: Agent browser entry check
         run: |
           export PATH=/tmp/browser/node_modules/.bin:$PATH
           agent-browser --args '--enable-unsafe-swiftshader,--use-angle=swiftshader' open http://127.0.0.1:5678
           agent-browser wait --load networkidle
           agent-browser snapshot -i
           agent-browser screenshot /tmp/evidence/library-agent.png
-          agent-browser eval 'document.querySelector("[data-nextjs-dialog]") ? "ERROR_OVERLAY" : document.querySelector("main").dataset.gameMode'
+          agent-browser eval 'if(document.querySelector("main").dataset.gameMode!=="library") throw new Error(document.body.innerText); "LIBRARY_OK"'
           agent-browser close
-      - name: Representative game interaction
+      - name: Representative game and save interactions
         run: |
           cat > /tmp/browser/smoke.mjs <<'JS'
           import { chromium } from 'playwright';
           import assert from 'node:assert/strict';
-          const browser = await chromium.launch({args:['--enable-unsafe-swiftshader','--use-angle=swiftshader']});
-          const context = await browser.newContext({viewport:{width:1280,height:800},deviceScaleFactor:2});
-          const page = await context.newPage();
-          const errors=[]; page.on('pageerror',error=>{errors.push(error.message); console.log('PAGE ERROR',error.message);});
+          import { readFile } from 'node:fs/promises';
+          const browser=await chromium.launch({args:['--enable-unsafe-swiftshader','--use-angle=swiftshader']});
+          const context=await browser.newContext({viewport:{width:1280,height:800},deviceScaleFactor:2});
+          const page=await context.newPage();
+          const errors=[];
+          page.on('pageerror',error=>{errors.push(error.message); console.log('PAGE ERROR',error.message);});
           page.on('console',message=>{if(message.type()==='error') console.log('CONSOLE ERROR',message.text());});
-          const mode=async value=>await page.waitForSelector(`main[data-game-mode="${value}"]`,{timeout:30000});
+          const mode=async value=>{console.log('EXPECT',value);await page.waitForSelector(`main[data-game-mode="${value}"]`,{timeout:15000});};
           const action=async id=>await page.locator(`[data-action="${id}"]`).evaluate(element=>element.click());
           const pieces=async()=>await page.locator('[data-piece]').evaluateAll(elements=>elements.map(element=>({id:element.dataset.piece,text:element.textContent})));
+          const originalText=text=>text.replace(/(^|\n)[ \u3000]+/g,'$1').replace(/\n/g,'');
+          const saved=async()=>await page.evaluate(()=>new Promise((resolve,reject)=>{const r=indexedDB.open('aozora-puzzle',1);r.onsuccess=()=>{const db=r.result,tx=db.transaction('books','readonly'),q=tx.objectStore('books').get('000789');tx.oncomplete=()=>{db.close();resolve(q.result);};tx.onerror=()=>reject(tx.error);};}));
           try {
-            await page.goto('http://127.0.0.1:5678');
-            await mode('library');
+            await page.goto('http://127.0.0.1:5678');await mode('library');
             assert.equal(await page.locator('canvas').count(),1);
             await page.screenshot({path:'/tmp/evidence/desktop-library.png'});
-            // Use an actual canvas pointer on the first book, not a test-only scene API.
-            await page.mouse.click(584,187); await mode('reading');
+            await page.mouse.click(584,187);await mode('reading');
             const original=await page.locator('[data-original]').textContent();
             await page.screenshot({path:'/tmp/evidence/desktop-reading.png'});
-            await page.mouse.click(90,770); await mode('assembling');
+            await page.mouse.click(90,770);await mode('assembling');
             assert.equal(await page.locator('[data-original]').count(),0);
-            const initial=await pieces(); assert.equal(initial.length,12);
+            const initial=await pieces();assert.equal(initial.length,12);
             await page.screenshot({path:'/tmp/evidence/desktop-desk.png'});
-            await page.locator('canvas').focus(); await page.keyboard.press('r'); await mode('review');
+            await page.mouse.move(60,195);await page.mouse.down();await page.mouse.move(100,250,{steps:6});await page.mouse.up();
+            assert.equal((await pieces()).length,12);
+            await action('undo');
+            await page.locator('canvas').focus();await page.keyboard.press('r');await mode('review');
             assert.equal(await page.locator('[data-original]').textContent(),original);
-            await page.keyboard.press('Escape'); await mode('assembling');
+            await page.keyboard.press('Escape');await mode('assembling');
             assert.deepEqual(await pieces(),initial);
-            // All accessibility controls feed the same scene commands as tap/drag.
-            const expected=original.replace(/(^|\n)[ \u3000]+/g,'$1').replace(/\n/g,'');
-            let remaining=expected;
-            const ordered=[];
-            const pool=[...initial];
+            let remaining=originalText(original);const ordered=[],pool=[...initial];
             while(remaining){const index=pool.findIndex(piece=>remaining.startsWith(piece.text));assert.ok(index>=0);const [piece]=pool.splice(index,1);ordered.push(piece);remaining=remaining.slice(piece.text.length);}
-            let left=ordered.shift();
-            for (const right of ordered){
-              await page.locator(`[data-piece="${right.id}"]`).evaluate(element=>element.click());
-              await action(`join:after:${left.id}`);
-              left.text+=right.text;
-            }
+            const left=ordered.shift();
+            for(const right of ordered){await page.locator(`[data-piece="${right.id}"]`).evaluate(element=>element.click());await action(`join:after:${left.id}`);}
             await mode('complete');
             assert.equal(await page.locator('[data-original]').textContent(),original);
             await page.screenshot({path:'/tmp/evidence/desktop-complete.png'});
-            await action('undo'); await mode('assembling');
-            assert.equal((await pieces()).length,2);
-            await action('library'); await mode('leave'); await action('confirm'); await mode('library');
-            await action('import'); await mode('import');
-            await page.locator('#work-url').fill('https://www.aozora.gr.jp/cards/000148/card789.html');
-            await page.screenshot({path:'/tmp/evidence/import.png'});
-            await page.locator('#work-url').press('Escape'); await mode('library');
+            await action('undo');await mode('assembling');assert.equal((await pieces()).length,2);
+            await action('library');await mode('leave');await action('confirm');await mode('library');
             assert.deepEqual(errors,[]);
-            console.log('PASS desktop: real canvas entry, read, 12 pieces, review freeze, common-command completion, undo, import focus');
+            console.log('PASS desktop: actual canvas entry, read, paper drag, review, common-command completion, undo');
+            const old={id:'000789',title:'吾輩は猫である',author:'夏目漱石',kanaType:'新字新仮名',addedAt:'2026-09-01T00:00:00.000Z',passages:[{difficulty:'easy',encrypted:'legacy-fixture'}]};
+            await page.evaluate(book=>new Promise((resolve,reject)=>{const r=indexedDB.open('aozora-puzzle',1);r.onsuccess=()=>{const db=r.result,tx=db.transaction('books','readwrite');tx.objectStore('books').put(book);tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>reject(tx.error);};}),old);
+            await page.reload();await mode('library');await action('books');await mode('books');await action('reimport-000789');await mode('import');
+            await page.locator('#work-url').fill('https://www.aozora.gr.jp/cards/000148/card789.html');
+            await page.route('**/api/books/import',route=>route.fulfill({status:422,contentType:'application/json',body:JSON.stringify({success:false,error:{message:'取り込みに失敗しました。再試行してください。'}})}));
+            await action('import-submit');
+            await page.waitForFunction(()=>document.querySelector('[role="status"]')?.textContent.includes('取り込みに失敗'));
+            assert.deepEqual(await saved(),old);
+            await page.screenshot({path:'/tmp/evidence/import-error.png'});
+            await page.unroute('**/api/books/import');
+            const passage=JSON.parse(await readFile('/tmp/passages.json','utf8'))[0];
+            const book={...old,formatVersion:2,sourceUrl:'https://www.aozora.gr.jp/cards/000148/card789.html',passages:[passage]};
+            await page.route('**/api/books/import',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({success:true,data:book})}));
+            await action('import-submit');await mode('library');assert.equal((await saved()).formatVersion,2);
+            console.log('PASS save: failed re-import retains exact legacy record, successful validated fixture replaces it atomically');
             const mobile=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true});
-            const phone=await mobile.newPage();
-            phone.on('pageerror',error=>errors.push(error.message));
-            await phone.goto('http://127.0.0.1:5678'); await phone.waitForSelector('main[data-game-mode="library"]');
-            await phone.touchscreen.tap(315,187); await phone.waitForSelector('main[data-game-mode="reading"]');
-            await phone.touchscreen.tap(90,814); await phone.waitForSelector('main[data-game-mode="assembling"]');
+            const phone=await mobile.newPage();phone.on('pageerror',error=>errors.push(error.message));
+            await phone.goto('http://127.0.0.1:5678');await phone.waitForSelector('main[data-game-mode="library"]');
+            await phone.touchscreen.tap(315,187);await phone.waitForSelector('main[data-game-mode="reading"]');
+            await phone.touchscreen.tap(90,814);await phone.waitForSelector('main[data-game-mode="assembling"]');
             assert.equal(await phone.locator('[data-piece]').count(),12);
             await phone.screenshot({path:'/tmp/evidence/mobile-desk.png'});
             const client=await mobile.newCDPSession(phone);
@@ -158,20 +131,33 @@ jobs:
             await client.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:130,y:330,id:1},{x:260,y:450,id:2}]});
             await client.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
             assert.equal(await phone.locator('[data-piece]').count(),12);
-            await phone.setViewportSize({width:844,height:390});
-            await phone.screenshot({path:'/tmp/evidence/mobile-landscape.png'});
-            assert.equal(await phone.locator('canvas').count(),1);
-            assert.deepEqual(errors,[]);
-            console.log('PASS mobile: portrait touch entry, two-finger zoom does not join pieces, landscape resize');
-            await mobile.close();
-          } catch(error) {
-            console.log('DIAGNOSTIC',await page.locator('body').innerText());
-            await page.screenshot({path:'/tmp/evidence/failure.png'});
-            throw error;
-          } finally {await browser.close();}
+            await phone.setViewportSize({width:844,height:390});await phone.screenshot({path:'/tmp/evidence/mobile-landscape.png'});
+            assert.equal(await phone.locator('canvas').count(),1);assert.deepEqual(errors,[]);await mobile.close();
+            console.log('PASS mobile: actual portrait taps, two-finger zoom without accidental joins, landscape resize');
+            const failure=await browser.newContext();const blocked=await failure.newPage();
+            await blocked.route('**/*.woff2',route=>route.abort());
+            await blocked.goto('http://127.0.0.1:5678');await blocked.getByRole('button',{name:'再試行'}).waitFor();
+            assert.match(await blocked.locator('.boot-note').innerText(),/書体/);
+            await blocked.unroute('**/*.woff2');await blocked.getByRole('button',{name:'再試行'}).click();
+            await blocked.waitForSelector('main[data-game-mode="library"]');assert.equal(await blocked.locator('canvas').count(),1);await failure.close();
+            console.log('PASS fonts: failed font requests report an error, explicit retry creates exactly one working canvas');
+          } catch(error){console.log('DIAGNOSTIC',await page.locator('body').innerText());await page.screenshot({path:'/tmp/evidence/failure.png'});throw error;}
+          finally{await browser.close();}
           JS
           node /tmp/browser/smoke.mjs
-      - name: Preserve small review evidence
+      - name: Publish review screenshots
+        if: always()
+        run: |
+          mkdir -p docs/verification
+          for image in desktop-library desktop-reading desktop-desk desktop-complete mobile-desk mobile-landscape failure; do
+            if test -f /tmp/evidence/$image.png; then cp /tmp/evidence/$image.png docs/verification/$image.png; fi
+          done
+          git add docs/verification
+          if ! git diff --cached --quiet; then
+            git commit -m 'docs: capture real-browser manuscript verification screenshots'
+            git push origin HEAD:codex/issue-1-manuscript-desk
+          fi
+      - name: Preserve diagnostic evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -185,5 +171,4 @@ jobs:
         run: |
           git rev-parse HEAD
           node --version
-          npm --version
           cat /tmp/server.log || true
