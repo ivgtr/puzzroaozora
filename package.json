@@ -1,13 +1,17 @@
 {
   "name": "puzzroaozora",
   "version": "0.1.0",
-  "description": "青空文庫の文学作品から抜粋した一節を並び替えるワードパズルゲーム",
+  "description": "原稿用紙の切れ端をつなぎ直す青空文庫の文章パズル",
   "private": true,
   "scripts": {
+    "predev": "node scripts/prepare-fonts.mjs",
     "dev": "next dev --turbopack -p 5678",
-    "build": "next build",
+    "prebuild": "node scripts/prepare-fonts.mjs",
+    "build": "next build --webpack",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test tests/*.test.ts"
   },
   "dependencies": {
     "next": "^16.2.2",
