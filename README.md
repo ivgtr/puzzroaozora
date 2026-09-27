@@ -1,39 +1,47 @@
-<div align="center">
+# 青空の修復机
 
-# 青空パズル
+青空文庫の一節を読み、伏せた原稿の紙片をつなぎ直すブラウザゲーム。
+点数ではなく、ばらばらの言葉から情景が戻る瞬間を中心にしています。
 
-青空文庫の文学作品から抜粋した一節を並び替えるワードパズルゲーム
+## 遊び方
 
-[Demo](https://puzzroaozora.vercel.app/)
+本棚で原稿と難易度を選び、自分のペースで原文を読んでから「組み立てる」。先頭に限らず好きな場所から、紙片を相手の前後へつなぎます。新しいまとまりの確定はEasy=2枚、Normal=3枚、Hard=4枚。確定したまとまりへは1枚から追加できます。
 
-</div>
+ドラッグで近づけて離すか、紙片を選んで相手の端をタップします。合わなかった仮組みは残り、選んだ塊の切れ目をタップして外せます。確定した切れ目は外れませんが、直前の操作は「戻す」で取り消せます。全文が戻ると自動で完成します。
 
-作品データの取得に [libroaozora](https://github.com/ivgtr/libroaozora) を利用しています。
+机の余白をドラッグして移動、ホイール・二本指で拡大縮小。原文はいつでも見直せます。キーボードは画面にフォーカスして、矢印で移動、Enterで紙片を選択、`[` / `]` で前後に接続、Deleteで仮の切れ目を分離、Zで戻す、Rで原文、Hで手引き、Escで取消。Tabでは同じコマンドを使う読み上げ用ボタンを操作できます。
 
-## セットアップ
+## 開発
 
-```bash
-npm install
-cp .env.example .env.local
-npm run dev
+Node.js 22を使用します。
+
+```sh
+npm ci
+npm run dev        # http://localhost:5678
+npm test           # Node標準の小さなルール・原文検査
+npm run lint
+npm run typecheck
+npm run build
+npm start
 ```
 
-## コマンド
+初回のdev/buildで、ロック済みのFontsourceパッケージから書体と字形範囲表を`public/fonts/`へ生成します。ブラウザから外部フォントCDNへは接続しません。生成物はGit管理しません。
 
-| コマンド        | 説明                           |
-| --------------- | ------------------------------ |
-| `npm run dev`   | 開発サーバー (Turbopack, 5678) |
-| `npm run build` | プロダクションビルド           |
-| `npm start`     | プロダクションサーバー         |
-| `npm run lint`  | ESLint                         |
+推奨原稿と保存済みの本で遊ぶ際に作品APIは不要です。新しい作品の取り込みだけ、`.env.example`を参考に`AOZORA_API_BASE_URL`へLibroAozoraのURLを設定してください。未設定・失敗・候補不足は明示し、別作品や作例を黙って出題しません。
 
-## 環境変数
+## 構成
 
-| 変数                  | 必須 | 説明                                         |
-| --------------------- | ---- | -------------------------------------------- |
-| `AOZORA_API_BASE_URL` | Yes  | libroaozora API のベース URL                 |
-| `PUZZLE_TOKEN_SECRET`  | No   | 解答トークン署名キー（未指定時は開発用既定値） |
+- `src/game/model.ts`：ゲーム状態とコマンド。描画・React・通信には依存しません。
+- `src/game/DeskScene.ts`：Phaserの画面、入力、カメラ、セッション所有者。
+- `src/game/layout.ts` / `paper.ts`：原稿用紙の文字配置と描画。
+- `src/components/GameHost.tsx`：Canvasの寿命、IME入力、読み上げ用の状態投影。
+- `src/data/passages.ts`：出典・抜粋位置・分割・意図を持つ推奨原稿。
+- `src/lib/aozora.ts` / `books.ts`：有限の取り込みとIndexedDB保存。
 
-## ライセンス
+旧採点画面・全体回答送信API・署名トークン・暗号化された短文の復号経路は廃止しました。旧保存作品は消さず、本棚の「保存した本」から再取り込みします。成功するまで元のレコードを変更しません。`/play`と`/result`の旧URLはトップへ移動します。
 
-MIT ©[ivgtr](https://github.com/ivgtr)
+## 素材・検証
+
+本文は青空文庫の原典からの抜粋で、作品ごとの出典をデータに記録しています。Noto Serif JP / Noto Sans JPはSIL Open Font License 1.1、PhaserはMIT。紙面・罫線と短い効果音はこの実装で作成しています。
+
+設計と検証範囲は[ゲーム仕様](計画/青空パズル仕様書.md)、[UI仕様](計画/UIデザイン仕様書.md)、[取り込み仕様](計画/青空文庫データ処理実装計画.md)、[検証記録](docs/verification.md)を参照してください。
