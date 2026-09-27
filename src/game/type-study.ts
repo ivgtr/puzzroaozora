@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { makePaper, GRID, PAPER, INK, graphemes } from './paper';
 import { BODY_FONT, UI_FONT, FONT_SPECIMEN } from './fonts';
+import { renderResolution } from './display';
 
 export const STUDY_COPY = '横組 縦組 比較見本 採用 同じ短文 本文 原稿 用紙 単独 仮組 正式 完成 字面 罫線 明朝 400 500 18 22 26 30 0.24 0.34 DPI zoom px Noto Serif JP Noto Sans JP ホイール・ドラッグで移動 吾輩は猫である。名前はまだ無い。';
 
@@ -9,7 +10,7 @@ export class TypeStudy extends Phaser.Scene {
   create() {
     const width = this.scale.width, narrow = width < 680;
     this.cameras.main.setBackgroundColor('#2a4941').setBounds(0, 0, Math.max(width, 360), 1750);
-    const label = (x: number, y: number, value: string, size = 13) => this.add.text(x, y, value, { fontFamily: UI_FONT, fontStyle: '500', fontSize: size, color: '#f1ead4' }).setResolution(window.devicePixelRatio || 1);
+    const label = (x: number, y: number, value: string, size = 13) => this.add.text(x, y, value, { fontFamily: UI_FONT, fontStyle: '500', fontSize: size, color: '#f1ead4' }).setResolution(renderResolution());
     label(24, 20, `Noto Serif JP / DPI ${window.devicePixelRatio || 1} / zoom 1`, 14);
     label(24, 48, '比較見本 — ホイール・ドラッグで移動');
     const short = '吾輩は猫である。名前はまだ無い。';
@@ -27,7 +28,7 @@ export class TypeStudy extends Phaser.Scene {
       for (let row = 0; row <= rows; row++) g.lineBetween(vx + 14, vy + 14 + row * c, vx + 14 + cols * c, vy + 14 + row * c);
       chars.forEach((char, i) => {
         const punctuation = /[、。]/.test(char), x = vx + 14 + (cols - 1 - Math.floor(i / rows)) * c, y = vy + 14 + (i % rows) * c;
-        this.add.text(x + (c - config.fontSize) / 2 + (punctuation ? config.fontSize * 0.56 : 0), y + (c - config.fontSize) / 2 - (punctuation ? config.fontSize * 0.35 : 0), char, { fontFamily: BODY_FONT, fontStyle: String(config.weight), fontSize: config.fontSize, color: INK }).setResolution((window.devicePixelRatio || 1) * 1.5);
+        this.add.text(x + (c - config.fontSize) / 2 + (punctuation ? config.fontSize * 0.56 : 0), y + (c - config.fontSize) / 2 - (punctuation ? config.fontSize * 0.35 : 0), char, { fontFamily: BODY_FONT, fontStyle: String(config.weight), fontSize: config.fontSize, color: INK }).setResolution(renderResolution());
       });
     }
     const lower = narrow ? 1140 : 820;

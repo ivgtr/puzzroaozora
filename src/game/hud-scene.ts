@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import Label from 'phaser4-rex-plugins/templates/ui/label/Label.js';
 import { DeskController, type Snapshot } from './controller';
 import { BODY_FONT, UI_FONT } from './fonts';
+import { renderResolution } from './display';
 
 /** Screen-space UI. Rex Label owns button sizing; there is no DOM game layout. */
 export class HudScene extends Phaser.Scene {
@@ -24,12 +25,12 @@ export class HudScene extends Phaser.Scene {
     return this.track(this.add.text(x, y, value, {
       fontFamily: serif ? BODY_FONT : UI_FONT, fontStyle: '500', fontSize: size,
       color, lineSpacing: 7,
-    }).setResolution(Math.min(window.devicePixelRatio || 1, 3) * 1.5));
+    }).setResolution(renderResolution());
   }
   private button(x: number, y: number, text: string, action: () => void, width = 110, active = false) {
     const background = this.add.rectangle(0, 0, width, 40, active ? 0xe8d1a2 : 0x3b574b).setStrokeStyle(1, 0xbdaa7c, active ? 0.8 : 0.4);
     const label = new Label(this, { x, y, width, height: 40, background,
-      text: this.add.text(0, 0, text, { fontFamily: UI_FONT, fontStyle: '500', fontSize: 14, color: active ? '#302f28' : '#f1ead4' }).setResolution(Math.min(window.devicePixelRatio || 1, 3) * 1.5),
+      text: this.add.text(0, 0, text, { fontFamily: UI_FONT, fontStyle: '500', fontSize: 14, color: active ? '#302f28' : '#f1ead4' }).setResolution(renderResolution()),
       space: { left: 12, right: 12, top: 6, bottom: 6 }, align: 'center',
     });
     this.add.existing(label); label.layout();

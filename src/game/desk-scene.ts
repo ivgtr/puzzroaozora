@@ -143,7 +143,6 @@ export class DeskScene extends Phaser.Scene {
     });
     const position = this.positions.get(id)!;
     paper.root.setPosition(position.x, position.y).setDepth(++this.depth).setData('chain', id);
-    paper.root.setSize(paper.layout.width, paper.layout.height);
     paper.root.setInteractive(new Phaser.Geom.Rectangle(0, 0, paper.layout.width, paper.layout.height), Phaser.Geom.Rectangle.Contains);
     this.input.setDraggable(paper.root);
     paper.root.on('pointerdown', () => { if (this.canInteract()) this.controller.select(id); });

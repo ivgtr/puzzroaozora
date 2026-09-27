@@ -19,6 +19,11 @@ for (const config of [{ name: 'desktop', width: 1280, height: 900, dpr: 1 }, { n
     await page.getByRole('button', { name: 'Normal・3枚で確定', exact: true }).waitFor({ state: 'attached', timeout: 30000 });
     await capture(page, `library-${config.name}`);
     assert.equal(await page.locator('.game-canvas canvas').count(), 1);
+    const canvasMetrics = await page.locator('.game-canvas canvas').evaluate((canvas) => ({
+      width: canvas.width, height: canvas.height, clientWidth: canvas.clientWidth, clientHeight: canvas.clientHeight,
+    }));
+    const expectedResolution = Math.min(config.dpr, 2);
+    assert.ok(Math.abs(canvasMetrics.width / canvasMetrics.clientWidth - expectedResolution) < 0.05, 'canvas backing resolution follows the capped DPR');
     await press(page, 'Normal・3枚で確定');
     // Normal game selection and start are canvas clicks, not direct state mutation.
     if (config.name === 'desktop') await page.mouse.click(780, 425);
@@ -58,7 +63,7 @@ for (const config of [{ name: 'desktop', width: 1280, height: 900, dpr: 1 }, { n
     const details = await page.evaluate(() => ({ canvas: document.querySelectorAll('.game-canvas canvas').length, textures: Object.keys(window.__game.textures.list).length, soundCount: window.__game.sound.sounds.length, phase: window.__game.scene.getScene('Desk').controller.session.phase, scrollHeight: document.documentElement.scrollHeight, height: innerHeight }));
     assert.equal(details.canvas, 1); assert.equal(details.phase, 'complete'); assert.equal(details.scrollHeight, details.height);
     await press(page, '次の原稿'); await page.locator('[data-original]').waitFor({ state: 'attached' });
-    results.push(`${config.name}: 30 pieces, middle-first Normal completion, same canvas, next reading; ${JSON.stringify(details)}`);
+    results.push(`${config.name}: 30 pieces, middle-first Normal completion, same canvas, next reading, DPR ${expectedResolution}; ${JSON.stringify(details)}`);
     await press(page, '作品一覧へ'); await press(page, '作品を取り込む');
     await page.getByLabel('青空文庫のURL', { exact: true }).fill('https://www.aozora.gr.jp/cards/999999/card999999.html');
     await page.getByRole('button', { name: '取り込む', exact: true }).click();

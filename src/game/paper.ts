@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { BODY_FONT, UI_FONT } from './fonts';
+import { renderResolution } from './display';
 
 const segmenter = new Intl.Segmenter('ja', { granularity: 'grapheme' });
 export const graphemes = (text: string): string[] => Array.from(segmenter.segment(text.replace(/\r\n?|\n/g, '')), (part) => part.segment);
@@ -52,7 +53,7 @@ export function makePaper(scene: Phaser.Scene, texts: readonly string[], confirm
   for (let x = PAD; x <= width - PAD; x += cell) grid.lineBetween(x, PAD, x, height - PAD);
   for (let y = PAD; y <= height - PAD; y += cell) grid.lineBetween(PAD, y, width - PAD, y);
   const key = `manuscript-${++textureId}`;
-  const density = Math.min(window.devicePixelRatio || 1, 3) * 1.5;
+  const density = renderResolution();
   const texture = scene.textures.createCanvas(key, Math.ceil(width * density), Math.ceil(height * density));
   if (!texture) throw new Error('紙面を作成できませんでした。');
   const context = texture.getContext();
