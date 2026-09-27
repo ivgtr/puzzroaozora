@@ -215,6 +215,7 @@ export class DeskScene extends Phaser.Scene {
       this.label(passage.author, x + 29, y + 41, 12, cardWidth - 118);
       this.label(passage.id === "cat-first" && this.difficulty !== "easy" ? "同じ原稿で連結枚数を比較" : passage.original.replace(/\n/g, "").slice(0, 16), x + 29, y + 65, 11, cardWidth - 48);
       this.button(`open-${passage.id}`, "読む", x + cardWidth - 78, y + 15, 62, 40, () => { void this.openPassage(passage); });
+      this.actions.get(`open-${passage.id}`)!.label = `${passage.title}（${passage.author}）・${passage.location}を読む`;
     });
     if (entries.length === 0) this.label("この難易度の抜粋はありません。", 30, 168, 17, this.w - 60, "#f8f1df");
     const y = this.h - 58;
