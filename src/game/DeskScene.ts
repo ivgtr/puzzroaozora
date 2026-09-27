@@ -5,7 +5,7 @@ import { Session, makeProblem, type Chain, type Command, type Point } from "./mo
 import { RULES, type Difficulty, type Passage } from "./text.ts";
 import { CELL, layoutManuscript } from "./layout.ts";
 import { prepareFont, prepareText } from "./fonts.ts";
-import { Paper, INK, PAPER, MAT } from "./paper.ts";
+import { Paper, PAPER, MAT } from "./paper.ts";
 import { playCue, prepareSounds } from "./sound.ts";
 import type { DeskSnapshot, HostBridge } from "./bridge.ts";
 
@@ -82,6 +82,7 @@ export class DeskScene extends Phaser.Scene {
     this.game.canvas.setAttribute("aria-label", "青空の修復机。操作の手引きはHキー。Tabキーで同じ操作の読み上げ用ボタンへ移動します。");
     this.game.canvas.addEventListener("keydown", this.onKey);
     this.game.canvas.addEventListener("pointercancel", this.cancelGesture);
+    this.game.canvas.addEventListener("touchcancel", this.cancelGesture);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.shutdown, this);
     this.resize();
     void this.loadBooks();
@@ -95,6 +96,7 @@ export class DeskScene extends Phaser.Scene {
     this.game.events.off(Phaser.Core.Events.BLUR, this.cancelGesture, this);
     this.game.canvas.removeEventListener("keydown", this.onKey);
     this.game.canvas.removeEventListener("pointercancel", this.cancelGesture);
+    this.game.canvas.removeEventListener("touchcancel", this.cancelGesture);
     this.views.clear();
   }
 
@@ -282,7 +284,9 @@ export class DeskScene extends Phaser.Scene {
       this.button("close", "閉じる", x + width - 114, y + height - 60, 90, 40, () => this.closeOverlay());
     } else if (this.overlay === "books") {
       this.label("保存した本", x + 24, y + 22, 21);
-      const visible = this.saved.slice(this.reviewPage * 3, this.reviewPage * 3 + 3);
+      const perPage = Math.max(1, Math.min(3, Math.floor((height - 134) / 110)));
+      this.reviewPage = Math.min(this.reviewPage, Math.max(0, Math.ceil(this.saved.length / perPage) - 1));
+      const visible = this.saved.slice(this.reviewPage * perPage, (this.reviewPage + 1) * perPage);
       if (!visible.length) this.label("まだ保存した本はありません。", x + 26, y + 76, 16, width - 52);
       visible.forEach((book, index) => {
         const yy = y + 70 + index * 110;
@@ -292,7 +296,7 @@ export class DeskScene extends Phaser.Scene {
       });
       const bottom = y + height - 54;
       this.button("books-prev", "前", x + 24, bottom, 44, 36, () => { this.reviewPage = Math.max(0, this.reviewPage - 1); this.render(); });
-      this.button("books-next", "次", x + 76, bottom, 44, 36, () => { this.reviewPage = Math.min(Math.max(0, Math.ceil(this.saved.length / 3) - 1), this.reviewPage + 1); this.render(); });
+      this.button("books-next", "次", x + 76, bottom, 44, 36, () => { this.reviewPage = Math.min(Math.max(0, Math.ceil(this.saved.length / perPage) - 1), this.reviewPage + 1); this.render(); });
       this.button("close", "閉じる", x + width - 114, bottom, 90, 36, () => this.closeOverlay());
     } else if (this.overlay === "help") {
       this.label("操作の手引き", x + 24, y + 22, 21);
@@ -518,7 +522,7 @@ export class DeskScene extends Phaser.Scene {
   private onBoard(pointer: Point): boolean { return pointer.y >= this.top && pointer.y < this.h - 60; }
   private touching(): Phaser.Input.Pointer[] { return this.input.manager.pointers.filter((pointer) => pointer.isDown && this.onBoard(pointer)); }
   private hitPaper(point: Point): { id: string; paper: Paper } | undefined {
-    const views = [...this.views].reverse();
+    const views = [...this.views].sort((a, b) => this.world.getIndex(b[1].paper) - this.world.getIndex(a[1].paper));
     for (const [id, view] of views) if (point.x >= view.paper.x && point.x <= view.paper.x + view.paper.width && point.y >= view.paper.y && point.y <= view.paper.y + view.paper.height) return { id, paper: view.paper };
     return undefined;
   }
@@ -638,8 +642,9 @@ export class DeskScene extends Phaser.Scene {
   }
 
   private cancelGesture = (): void => {
-    if (this.gesture?.kind === "paper" && this.session) {
-      const stable = this.session.state.chains.find((chain) => chain.id === this.gesture?.id);
+    const gesture = this.gesture;
+    if (gesture?.kind === "paper" && this.session) {
+      const stable = this.session.state.chains.find((chain) => chain.id === gesture.id);
       const view = stable && this.views.get(stable.id);
       if (stable && view) view.paper.setPosition(stable.x, stable.y);
     }

@@ -4,7 +4,7 @@ import { Session, canReconstruct, makeProblem } from "../src/game/model.ts";
 import { RULES, type Difficulty, type Passage } from "../src/game/text.ts";
 
 function start(fragments: string[], difficulty: Difficulty = "easy") {
-  const passage: Passage = { id: "test", workId: "test", title: "test", author: "test", sourceUrl: "https://example.com", original: fragments.join(""), fragments, note: "fixture", difficulty };
+  const passage: Passage = { id: "test", workId: "test", title: "test", author: "test", sourceUrl: "https://example.com", original: fragments.join(""), fragments, note: "fixture", location: "fixture", difficulty };
   const session = new Session(makeProblem(passage, difficulty, () => .5));
   session.begin(session.problem.tiles.map((_, i) => ({ x: i * 80, y: i * 13 })));
   const id = (text: string) => {
@@ -71,7 +71,7 @@ test("identical tiles are interchangeable and repeated phrases retain all possib
   assert.equal(session.dispatch({ type: "join", source: as[0].id, target: as[1].id, side: "after" }), "complete");
   conserved(session);
   assert.equal(canReconstruct("abcXabcY", ["abc", "Xabc", "Y"]), true);
-  assert.equal(canReconstruct("abcXabcY", ["abcXab", "abc", "Y"]), false);
+  assert.equal(canReconstruct("abcXabcY", ["bcXa", "abc", "Y"]), false);
 });
 
 test("completion and movement undo immediately; invalid actions do not add history", () => {
