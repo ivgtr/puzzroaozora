@@ -4,6 +4,7 @@ export interface DeskSnapshot {
   title: string;
   status: string;
   original?: string;
+  description?: string;
   actions: AccessibleAction[];
   pieces: { id: string; text: string; selected: boolean }[];
 }

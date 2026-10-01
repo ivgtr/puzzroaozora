@@ -35,6 +35,7 @@ export default function GameHost() {
     {snapshot && !error && <section className="sr-only" aria-label={`${snapshot.title}の操作`}>
       <h1>{snapshot.title}</h1>
       <p role="status" aria-live="polite">{snapshot.status}</p>
+      {snapshot.description && <p data-description role="status">{snapshot.description}</p>}
       {snapshot.original !== undefined && <p data-original>{snapshot.original}</p>}
       {snapshot.pieces.map((piece) => <button key={piece.id} data-piece={piece.id} aria-pressed={piece.selected} onFocus={() => port.current?.focus(`piece:${piece.id}`)} onClick={() => port.current?.dispatch(`piece:${piece.id}`)}>{piece.text}</button>)}
       {snapshot.actions.map((action) => <button key={action.id} data-action={action.id} onFocus={() => port.current?.focus(action.id)} onClick={() => port.current?.dispatch(action.id)}>{action.label}</button>)}

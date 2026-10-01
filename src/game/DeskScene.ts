@@ -9,7 +9,7 @@ import { Paper, PAPER, MAT } from "./paper.ts";
 import { playCue, prepareSounds } from "./sound.ts";
 import type { DeskSnapshot, HostBridge } from "./bridge.ts";
 
-export const UI_TEXT = `つなぎ方 読了 枚の紙片 ↗ 青空の修復机 三つの情景 紙片から、一節をつなぐ。 つなぐ 手掛かり 読み通す 別の情景 同じ情景 もう一度 つながりを見直す 原文 出典を読む 全体 戻す 操作 音と動き 設定 閉じる 以前の保存 保存した本 作品の取り込みは休止しています。保存データはそのまま残っています。新しいルールでは、手で選び直した三つの情景で遊べます。 この情景を離れますか 途中の配置は保存されません。 続ける 選び直す 一枚の原稿になりました。 紙片を選び、相手の端へ 余白を動かすと、ほかの紙片が見つかります 左端が前、右端が後。選んだ紙片をつなぎます。 切れ目をタップして、いつでも外せます。 つながりを作りました。 つながりを外しました。 一つ前の操作に戻しました。 原文とは、まだ少し違うようです。切れ目を外して読み直してみましょう。 ひとつにつながりました。読み通して確かめましょう。 音量 小 大 音なし 動きを控える 有効 無効 このブラウザでは音を利用できません。 紙片をドラッグして、相手の端へ。 紙片を選んでから相手の端をタップしてもつながります。 正誤は最後に読み通すまで分かりません。 選んだ紙片の切れ目をタップすると外せます。 余白をドラッグして移動。二本指・ホイールで拡大縮小。 矢印で移動、Enterで選択、[ と ]で前後へ。 Deleteで分離、Zで戻す、Hで手引き、Escで取消。 次の手掛かり 前へ 次へ 準備中です。 読み込めませんでした。 読み込みを完了できませんでした。 段落の順序を確かめる 紙片 残り 組 つながり 確認 正解の場所は示しません まだ保存した本はありません。 記録 この三問は手作業で選んだ抜粋です。 答えは、つなぎ終えたあとに。 選択した紙片を前につなぐ 選択した紙片を後につなぐ 番目の切れ目を外す 01 02 03 / · ← → ＋ − × ↶ … ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789[]()%「」、。`;
+export const UI_TEXT = `つなぎ方 読了 枚の紙片 ↗ 青空の修復机 三つの情景 紙片から、一節をつなぐ。 つなぐ 手掛かり 読み通す 別の情景 同じ情景 もう一度 つながりを見直す 原文 出典を読む 全体 戻す 操作 音と動き 設定 閉じる 以前の保存 保存した本 作品の取り込みは休止しています。保存データはそのまま残っています。新しいルールでは、手で選び直した三つの情景で遊べます。 この情景を離れますか 途中の配置は保存されません。 続ける 選び直す 一枚の原稿になりました。 紙片を選び、相手の端へ 余白を動かすと、ほかの紙片が見つかります 左端が前、右端が後。選んだ紙片をつなぎます。 切れ目をタップして、いつでも外せます。 つながりを作りました。 つながりを外しました。 一つ前の操作に戻しました。 原文とは、まだ少し違うようです。切れ目を外して読み直してみましょう。 ひとつにつながりました。読み通して確かめましょう。 音量 小 大 音なし 動きを控える 有効 無効 このブラウザでは音を利用できません。 紙片をドラッグして、相手の端へ。 紙片を選んでから相手の端をタップしてもつながります。 正誤は最後に読み通すまで分かりません。 選んだ紙片の切れ目をタップすると外せます。 余白をドラッグして移動。二本指・ホイールで拡大縮小。 矢印で移動、Enterで選択、[ と ]で前後へ。 Deleteで分離、Zで戻す、Hで手引き、Escで取消。 次の手掛かり 前へ 次へ 準備中です。 読み込めませんでした。 読み込みを完了できませんでした。 段落の順序を確かめる 紙片 残り 組 つながり 確認 正解の場所は示しません まだ保存した本はありません。 記録 この三問は手作業で選んだ抜粋です。 答えは、つなぎ終えたあとに。 選択した紙片を前につなぐ 選択した紙片を後につなぐ 番目の切れ目を外す 01 02 03 / · ← → ＋ − × … ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789[]()%「」、。`;
 
 type Overlay = "settings" | "leave" | "books" | "help" | "hint";
 type View = { paper: Paper; signature: string };
@@ -251,7 +251,7 @@ export class DeskScene extends Phaser.Scene {
     this.button("settings", "…", this.w - 60, 16, 44, 44, () => this.openOverlay("settings"));
     this.actions.get("settings")!.label = "音と動きの設定";
     const y = this.h - 61;
-    if (session.canUndo) this.button("undo", "↶ 戻す", 14, y, 78, 44, () => this.apply({ type: "undo" }));
+    if (session.canUndo) this.button("undo", "戻す", 14, y, 78, 44, () => this.apply({ type: "undo" }));
     if (complete) {
       this.label("一枚の原稿になりました。", 24, this.h - 108, 12, this.w - 48, "#647465");
       this.button("source", "出典を読む ↗", this.w / 2 - Math.min(152, this.w - 216) / 2, y, Math.min(152, this.w - 216), 44, () => window.open(problem.sourceUrl, "_blank", "noopener,noreferrer"), true);
@@ -293,7 +293,10 @@ export class DeskScene extends Phaser.Scene {
       const hints = this.session!.problem.hints;
       this.label(`${this.hintIndex + 1} / ${hints.length}`, x + width - 74, y + 38, 11, 0, "#817462");
       this.label(hints[this.hintIndex], x + 28, y + 99, 18, width - 56, "#475a4c", true);
-      if (this.hintIndex < hints.length - 1) this.button("hint-next", "次の手掛かり", x + 20, bottom, 144, 44, () => { this.hintIndex++; this.render(); });
+      if (this.hintIndex > 0) this.button("hint-prev", "←", x + 20, bottom, 44, 44, () => { this.hintIndex--; this.render(); });
+      if (this.hintIndex < hints.length - 1) this.button("hint-next", "→", x + 72, bottom, 44, 44, () => { this.hintIndex++; this.render(); });
+      if (this.actions.has("hint-prev")) this.actions.get("hint-prev")!.label = "前の手掛かり";
+      if (this.actions.has("hint-next")) this.actions.get("hint-next")!.label = "次の手掛かり";
     } else if (this.overlay === "help") {
       this.label("つなぎ方", x + 28, y + 28, 25, 0, "#354b40", true);
       this.label(`紙片をドラッグして、相手の端へ。
@@ -325,6 +328,10 @@ Deleteで分離、Zで戻す、Hで手引き、Escで取消。`, x + 28, bottom 
         });
       }
     }
+    if (this.overlay === "hint") snapshot.description = this.session!.problem.hints[this.hintIndex];
+    if (this.overlay === "help") snapshot.description = "紙片をドラッグして相手の端へ。選んでから相手の端をタップしてもつながります。選んだ紙片の切れ目をタップすると外せます。正誤は最後に読み通すまで分かりません。余白をドラッグして移動。二本指・ホイールで拡大縮小。矢印で移動、Enterで選択、[ と ]で前後へ。Deleteで分離、Zで戻す、Hで手引き、Escで取消。";
+    if (this.overlay === "books") snapshot.description = "作品の取り込みは休止しています。保存データはそのまま残っています。" + this.saved.map((book) => `${book.title}・${book.author}`).join("。 ");
+    if (this.overlay === "leave") snapshot.description = "途中の配置は保存されません。";
     this.bridge.publish(snapshot);
   }
 
