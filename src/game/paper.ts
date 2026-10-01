@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { BODY_SIZE, CELL, PAD, layoutManuscript, type ManuscriptLayout } from "./layout.ts";
 import { graphemes } from "./text.ts";
 import type { Point } from "./model.ts";
+import type { Bounds } from "./hint-context.ts";
 
 export const INK = 0x292c25;
 export const PAPER = 0xf8f2e3;
@@ -140,16 +141,30 @@ export class Paper extends Phaser.GameObjects.Container {
     if (selected || focused) this.outline.lineStyle(2, selected ? 0xa45f46 : 0x65796a, .95).strokeRoundedRect(-4, -4, this.width + 8, this.height + 8, 2);
   }
 
-  /** Mark only the explicitly requested successor, even inside a provisional group. */
-  hint(fragmentIndex: number): Point | undefined {
-    this.hintInk.clear();
+  fragmentBounds(fragmentIndex: number): (Bounds & { first: Bounds }) | undefined {
     const range = this.fragmentRanges[fragmentIndex];
     if (!range) return;
     const glyphs = this.layout.glyphs.filter((glyph) => glyph.index >= range.start && glyph.index < range.end);
-    this.hintInk.fillStyle(0xe3c66f, .58);
-    for (const glyph of glyphs) this.hintInk.fillRect(glyph.x, glyph.y, glyph.advance, CELL);
-    const first = glyphs[0];
-    return first ? { x: first.x + CELL / 2, y: first.y + CELL / 2 } : undefined;
+    if (!glyphs.length) return;
+    const x = Math.min(...glyphs.map((glyph) => glyph.x)), y = Math.min(...glyphs.map((glyph) => glyph.y));
+    return { x, y, width: Math.max(...glyphs.map((glyph) => glyph.x + glyph.advance)) - x, height: Math.max(...glyphs.map((glyph) => glyph.y + CELL)) - y, first: { x: glyphs[0].x, y: glyphs[0].y, width: glyphs[0].advance, height: CELL } };
+  }
+
+  /** Distinct source/next marks stay on exact fragments, including one wrong group. */
+  hint(fragmentIndex: number, sourceIndex = -1): void {
+    this.hintInk.clear();
+    for (const [index, source] of [[sourceIndex, true], [fragmentIndex, false]] as const) {
+      const range = this.fragmentRanges[index];
+      if (!range) continue;
+      const glyphs = this.layout.glyphs.filter((glyph) => glyph.index >= range.start && glyph.index < range.end);
+      this.hintInk.fillStyle(source ? 0xb3c8b4 : 0xe3c66f, source ? .52 : .58);
+      for (const glyph of glyphs) this.hintInk.fillRect(glyph.x, glyph.y, glyph.advance, CELL);
+      // The source also has an underline, so color is not the only distinction.
+      if (source) {
+        this.hintInk.fillStyle(0x4f7661, .9);
+        for (const glyph of glyphs) this.hintInk.fillRect(glyph.x, glyph.y + CELL - 2, glyph.advance, 2);
+      }
+    }
   }
 
   /** Raise only the cast shadow, leaving text, ports and pointer geometry fixed. */
