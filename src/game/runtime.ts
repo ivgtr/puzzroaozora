@@ -6,7 +6,7 @@ import type { GamePort, HostBridge } from "./bridge.ts";
 
 export async function startGame(parent: HTMLElement, bridge: HostBridge, signal: AbortSignal): Promise<GamePort> {
   await prepareFont(UI_TEXT + PASSAGES.map((passage) => passage.title + passage.author + passage.original.slice(0, 30)).join(""), "DeskSans");
-  await prepareFont("青空の修復机" + PASSAGES.map((passage) => passage.title).join(""), "DeskSerif");
+  await prepareFont("…0123456789青空の修復机" + PASSAGES.map((passage) => passage.title).join(""), "DeskSerif");
   signal.throwIfAborted();
   return new Promise((resolve, reject) => {
     const scene = new DeskScene(bridge, () => queueMicrotask(() => {

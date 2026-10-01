@@ -27,7 +27,14 @@ jobs:
           npm start -- -H 127.0.0.1 -p 5678 > /tmp/server.log 2>&1 &
           for i in $(seq 1 60); do curl -fsS http://127.0.0.1:5678 >/dev/null && break; sleep 1; done
       - name: Desktop and mobile interactions
-        run: node scripts/experience-check.mjs
+        run: node --experimental-strip-types scripts/experience-check.mjs
+      - name: Capture unchanged PR5 baseline
+        run: |
+          git worktree add --detach /tmp/baseline b251035f63981e4966eaf0199478a37685b48d9e
+          ln -s "$PWD/node_modules" /tmp/baseline/node_modules
+          (cd /tmp/baseline && npm run build && npm start -- -H 127.0.0.1 -p 5679 > /tmp/baseline-server.log 2>&1) &
+          for i in $(seq 1 90); do curl -fsS http://127.0.0.1:5679 >/dev/null && break; sleep 1; done
+          node scripts/baseline-capture.mjs
       - name: Evidence
         if: always()
         uses: actions/upload-artifact@v4

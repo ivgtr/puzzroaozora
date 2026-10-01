@@ -2,6 +2,7 @@
 import { chromium } from '/tmp/browser/node_modules/playwright/index.mjs';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
+import { dealManuscript, layoutManuscript, CELL } from '../src/game/layout.ts';
 const passages = JSON.parse(fs.readFileSync('/tmp/passages.json', 'utf8'));
 const browser = await chromium.launch({args: ['--enable-unsafe-swiftshader']});
 const errors = [];
@@ -24,6 +25,20 @@ try {
   await page.mouse.move(80,146); await page.mouse.down(); await page.mouse.move(76,685,{steps:10}); await page.mouse.up();
   await action('undo'); assert.equal((await pieces()).length,12); checks.push('canvas drag + Undo');
   const first=passages[0].fragments;
+  const initial=await pieces();
+  const positions=dealManuscript(initial.map(p=>p.text),16,1280);
+  const sourceIndex=initial.findIndex(p=>p.text===first[1]), targetIndex=initial.findIndex(p=>p.text===first[0]);
+  const sourceLayout=layoutManuscript(first[1],16), targetLayout=layoutManuscript(first[0],16);
+  const source=positions[sourceIndex], originalTarget=positions[targetIndex];
+  await page.mouse.move(originalTarget.x+24,originalTarget.y+28.5+88); await page.mouse.down();
+  await page.mouse.move(400,650,{steps:12}); await page.mouse.up();
+  const target={x:376,y:650-88-28.5};
+  const sx=source.x+24, sy=source.y+sourceLayout.glyphs[0].y+CELL/2+88;
+  const dx=target.x+targetLayout.width+24, dy=target.y+targetLayout.glyphs.at(-1).y+CELL/2+88;
+  await page.mouse.move(sx,sy); await page.mouse.down(); await page.mouse.move(dx,dy,{steps:18});
+  await shot('desktop-join-preview'); assert.equal((await pieces()).length,12, 'hover never joins');
+  await page.mouse.up(); assert.equal((await pieces()).length,11); assert((await pieces()).some(p=>p.text===first[0]+first[1]));
+  await shot('desktop-first-join'); await action('undo'); await action('undo'); checks.push('real canvas correct drag/drop; hover does not judge');
   await join(first[0],first[2]); assert.equal((await pieces()).length,11);
   const wrong=(await pieces()).find(p=>p.text===first[0]+first[2]); assert(wrong);
   await selected(wrong.text); await action(`split:${wrong.id}:0`); assert.equal((await pieces()).length,12);
@@ -62,12 +77,25 @@ try {
   await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:50,y:230},{x:250,y:460}]});
   await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
   assert.equal((await pieces()).length,12);
+  // Return to the initial camera and use a real tap on another sheet's visible port.
+  await page.reload(); await mode('library'); await action('open-cat-first'); await action('begin'); await mode('assembling');
+  const mobilePieces=await pieces(), mobilePositions=dealManuscript(mobilePieces.map(p=>p.text),10,390);
+  const firstBox=mobilePositions[0], secondBox=mobilePositions[1], secondLayout=layoutManuscript(mobilePieces[1].text,10);
+  await page.touchscreen.tap(firstBox.x+24,firstBox.y+28.5+108);
+  await page.touchscreen.tap(secondBox.x+secondLayout.width,secondBox.y+secondLayout.glyphs.at(-1).y+CELL/2+108);
+  assert.equal((await pieces()).length,11); await action('undo'); checks.push('real mobile select + end-port tap');
   await action('overview'); await action('review'); await mode('review'); await shot('mobile-review'); await action('close');
   await page.setViewportSize({width:844,height:390}); await shot('mobile-landscape'); assert.equal(await page.locator('canvas').count(),1);
   await page.setViewportSize({width:390,height:844});
   chain=first[0]; for(const text of first.slice(1)){await join(chain,text);chain+=text;}
   await mode('complete'); await shot('mobile-complete');
   checks.push('touch selection, pinch without joins, review, rotation, full mobile completion');
+  await action('library'); await mode('library');
+  await page.setViewportSize({width:844,height:390}); await shot('library-landscape');
+  await page.touchscreen.tap(300,228); await mode('reading'); await action('library');
+  await page.setViewportSize({width:320,height:568}); await shot('library-320');
+  await page.touchscreen.tap(185,344); await mode('reading'); await action('library');
+  checks.push('landscape and 320px library actual open controls');
   assert.deepEqual(errors,[]);
   fs.writeFileSync('/tmp/evidence/results.json',JSON.stringify({checks,errors,desktop:'1280x800 DPR2',mobile:'390x844 DPR2; 844x390 rotation',note:'Real pointer/touch representative interactions; full completion uses the shared accessible commands. No physical-device or human listening claim.'},null,2));
   console.log(JSON.stringify({checks,errors},null,2));

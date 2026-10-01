@@ -2,14 +2,14 @@ import Phaser from "phaser";
 import { PASSAGES } from "../data/passages.ts";
 import { importWork, isCurrent, readBooks, removeBook, saveBook, type LibraryBook } from "../lib/books.ts";
 import { Session, makeProblem, type Chain, type Command, type Point } from "./model.ts";
-import { RULES, type Difficulty, type Passage } from "./text.ts";
+import { graphemes, RULES, type Difficulty, type Passage } from "./text.ts";
 import { CELL, dealManuscript, layoutManuscript } from "./layout.ts";
 import { prepareFont, prepareText } from "./fonts.ts";
 import { Paper, PAPER, MAT } from "./paper.ts";
 import { playCue, prepareSounds } from "./sound.ts";
 import type { DeskSnapshot, HostBridge } from "./bridge.ts";
 
-export const UI_TEXT = `言葉をほどき、情景をもどす。 一冊を選んで、記憶のつづきを。 はじめの一節 本をひらく 原稿を伏せて、はじめる つながるたび、情景になる。 ゆっくり読む ひと息ついて読み返す 復元できました 読了 つなぐ ここに置く 紙片を選んで、相手の端へ。 仮のつながり 切れ目で外せます 確定まであと この先にも紙片があります 余白を動かして探す 紙片 残り 一節 しおり この原稿は 読む 組む 仕上がり · ↖ ↗ ↙ ↘ ↓ ← ＋ − × 確定 練習 音を消す 音を出す 手引き 同じ一節で遊ぶ ` + `青空の修復机 記憶をたよりに言葉をつなぐ 原稿を読む 組み立てる 原文 戻す 机全体 設定 本棚 前 後 頁 次 閉じる 作品を取り込む 作品カードURL 貼り付ける 取り込み 再取り込み 保存した本 削除 本を削除しますか 保存した抜粋だけを削除します 戻る この本を削除 この原稿を閉じますか 組立途中の配置は保存されません 原稿に戻る 本棚へ 音量 小 大 音なし 動きを控える 有効 無効 机へ戻る 出典 もう一度 読み終えたら組み立ててください。机の余白をドラッグすると原稿を動かせます。好きな箇所から、紙片をつないでください。切れ目をタップすると仮組みを外せます。選んだ紙片を相手の前か後につなぎます。一枚の原稿に戻りました。好きなところから読み返してください。紙片がつながりました。少し長い仮組みを作ってみましょう。原文を手掛かりに組み直せます。仮の切れ目を外しました。一つ前の操作に戻しました。準備中です。読み込めませんでした。再試行 旧保存形式です。元の作品カードから再取り込みしてください。まだ保存した本はありません。この難易度の抜粋はありません。同じ原稿で連結枚数を比較 原稿の追加 このブラウザでは音を利用できません。表示できない文字があります。読み込みを完了できませんでした。接続と保存設定を確認してください。原文は変更していません。自然な文のまとまりで出題できる抜粋が見つかりませんでした。別の作品を選んでください。作品取り込み先が未設定です。推奨原稿は通信なしで選べます。原稿を保存しました。削除しました。操作の手引き 紙片を選ぶ 確定した部分 仮組み 選択した紙片を前につなぐ 選択した紙片を後につなぐ 原文を見る 原稿の端は左が前、右が後です。選択してから端をタップしてもつながります。机の余白をドラッグ、二本指かホイールで拡大縮小。矢印で選択先を移動、Enterで紙片を選び、[と]で前後につなぎます。Deleteで仮の切れ目を外し、Zで戻す、Rで原文、Escで取消。青空文庫の作品カードのURLを貼り付けてください。保存された原文は削除されません。ページ 再読 回 音 書体 対応 接続 失敗 理由 変更 不正 入力 一覧 完了 キャンセル 再開 中止 続ける 生成 取得 表示 難易度 枚 印刷 小さい 大きい 紙片 未接続 この原稿の新規確定は枚です。ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 /:.-_+[]()%…「」、。→`;
+export const UI_TEXT = `余白で移動・紙片を選ぶ 相手の端へ 読み終えたら、自分のペースで。 言葉をほどき、情景をもどす。 一冊を選んで、記憶のつづきを。 はじめの一節 本をひらく 原稿を伏せて、はじめる つながるたび、情景になる。 ゆっくり読む ひと息ついて読み返す 復元できました 読了 つなぐ ここに置く 紙片を選んで、相手の端へ。 仮のつながり 切れ目で外せます 確定まであと この先にも紙片があります 余白を動かして探す 紙片 残り 一節 しおり この原稿は 読む 組む 仕上がり · ↖ ↗ ↙ ↘ ↓ ← ＋ − × 確定 練習 音を消す 音を出す 手引き 同じ一節で遊ぶ ` + `青空の修復机 記憶をたよりに言葉をつなぐ 原稿を読む 組み立てる 原文 戻す 机全体 設定 本棚 前 後 頁 次 閉じる 作品を取り込む 作品カードURL 貼り付ける 取り込み 再取り込み 保存した本 削除 本を削除しますか 保存した抜粋だけを削除します 戻る この本を削除 この原稿を閉じますか 組立途中の配置は保存されません 原稿に戻る 本棚へ 音量 小 大 音なし 動きを控える 有効 無効 机へ戻る 出典 もう一度 読み終えたら組み立ててください。机の余白をドラッグすると原稿を動かせます。好きな箇所から、紙片をつないでください。切れ目をタップすると仮組みを外せます。選んだ紙片を相手の前か後につなぎます。一枚の原稿に戻りました。好きなところから読み返してください。紙片がつながりました。少し長い仮組みを作ってみましょう。原文を手掛かりに組み直せます。仮の切れ目を外しました。一つ前の操作に戻しました。準備中です。読み込めませんでした。再試行 旧保存形式です。元の作品カードから再取り込みしてください。まだ保存した本はありません。この難易度の抜粋はありません。同じ原稿で連結枚数を比較 原稿の追加 このブラウザでは音を利用できません。表示できない文字があります。読み込みを完了できませんでした。接続と保存設定を確認してください。原文は変更していません。自然な文のまとまりで出題できる抜粋が見つかりませんでした。別の作品を選んでください。作品取り込み先が未設定です。推奨原稿は通信なしで選べます。原稿を保存しました。削除しました。操作の手引き 紙片を選ぶ 確定した部分 仮組み 選択した紙片を前につなぐ 選択した紙片を後につなぐ 原文を見る 原稿の端は左が前、右が後です。選択してから端をタップしてもつながります。机の余白をドラッグ、二本指かホイールで拡大縮小。矢印で選択先を移動、Enterで紙片を選び、[と]で前後につなぎます。Deleteで仮の切れ目を外し、Zで戻す、Rで原文、Escで取消。青空文庫の作品カードのURLを貼り付けてください。保存された原文は削除されません。ページ 再読 回 音 書体 対応 接続 失敗 理由 変更 不正 入力 一覧 完了 キャンセル 再開 中止 続ける 生成 取得 表示 難易度 枚 印刷 小さい 大きい 紙片 未接続 この原稿の新規確定は枚です。ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 /:.-_+[]()%…「」、。→`;
 
 type Overlay = "review" | "settings" | "import" | "leave" | "books" | "delete" | "help";
 type View = { paper: Paper; signature: string };
@@ -28,6 +28,7 @@ export class DeskScene extends Phaser.Scene {
   private uiCamera!: Phaser.Cameras.Scene2D.Camera;
   private views = new Map<string, View>();
   private manuscript?: Paper;
+  private manuscriptFrame?: Phaser.GameObjects.Container;
   private session?: Session;
   private currentPassage?: Passage;
   private selected?: string;
@@ -116,6 +117,20 @@ export class DeskScene extends Phaser.Scene {
     return label;
   }
 
+  private title(text: string, x: number, y: number, size: number, width: number, color: string, lines = 1): Phaser.GameObjects.Text {
+    const label = this.label(text, x, y, size, width, color, true);
+    const limit = size * 1.3 * lines + 6 * (lines - 1);
+    if (label.height <= limit) return label;
+    const chars = graphemes(text);
+    let low = 0, high = chars.length;
+    while (low < high) {
+      const middle = Math.ceil((low + high) / 2);
+      label.setText(chars.slice(0, middle).join("") + "…");
+      if (label.height <= limit) low = middle; else high = middle - 1;
+    }
+    return label.setText(chars.slice(0, low).join("") + "…");
+  }
+
   private panel(x: number, y: number, width: number, height: number): void {
     const ground = this.add.graphics();
     ground.fillStyle(0x172c21, .3).fillRoundedRect(x + 4, y + 7, width, height, 3);
@@ -187,17 +202,18 @@ export class DeskScene extends Phaser.Scene {
   }
 
   private renderLibrary(): void {
-    const compact = this.w < 700;
+    const short = this.h < 680;
+    const compact = this.w < 700 || short;
     const margin = compact ? 24 : Math.max(48, (this.w - 1112) / 2);
     const span = this.w - margin * 2;
     const background = this.add.graphics().fillStyle(MAT).fillRect(0, 0, this.w, this.h);
     background.lineStyle(1, 0xd4c5a7, .25).lineBetween(margin, 28, this.w - margin, 28);
     background.lineStyle(1, 0xd4c5a7, .2).lineBetween(margin, this.h - 78, this.w - margin, this.h - 78);
     this.hud.add(background);
-    this.label("AOZORA  /  LITERARY PUZZLE", margin, 43, 10, 0, "#bebfae");
-    this.label("青空の修復机", margin - 2, compact ? 69 : 76, compact ? 32 : 44, 0, "#f6efdc", true);
-    this.label(this.notice || "言葉をほどき、情景をもどす。", margin, compact ? 119 : 142, 13, span, "#c6ccbd");
-    const tabY = compact ? 165 : 200;
+    if (!short) this.label("AOZORA  /  LITERARY PUZZLE", margin, 43, 10, 0, "#bebfae");
+    this.label("青空の修復机", margin - 2, short ? 36 : compact ? 69 : 76, short ? 26 : compact ? 32 : 44, 0, "#f6efdc", true);
+    this.label(this.notice || "言葉をほどき、情景をもどす。", margin, short ? 77 : compact ? 119 : 142, 13, span, "#c6ccbd");
+    const tabY = short ? 96 : compact ? 165 : 200;
     const tabWidth = Math.min(126, span / 3);
     (["easy", "normal", "hard"] as Difficulty[]).forEach((difficulty, index) => {
       this.button(`difficulty-${difficulty}`, `${RULES[difficulty].label} · ${RULES[difficulty].threshold}枚`, margin + index * tabWidth, tabY, tabWidth - 6, 38, () => {
@@ -206,10 +222,10 @@ export class DeskScene extends Phaser.Scene {
     });
     const entries = PASSAGES.filter((passage) => passage.difficulty === this.difficulty).concat(this.saved.flatMap((book) => isCurrent(book) ? book.passages.filter((passage) => passage.difficulty === this.difficulty) : []));
     if (this.difficulty !== "easy") entries.push(PASSAGES[0]);
-    const cardY = tabY + 63;
+    const cardY = tabY + (short ? 50 : 63);
     const columns = compact ? 1 : 3;
-    const cardHeight = compact ? 138 : Math.max(210, Math.min(350, this.h - cardY - 134));
-    const rows = compact ? Math.max(1, Math.floor((this.h - cardY - 100) / (cardHeight + 16))) : 1;
+    const cardHeight = compact ? short ? 100 : 138 : Math.max(210, Math.min(350, this.h - cardY - 134));
+    const rows = compact ? Math.max(1, Math.floor((this.h - cardY - 90) / (cardHeight + 16))) : 1;
     const perPage = rows * columns;
     const maxPage = Math.max(0, Math.ceil(entries.length / perPage) - 1);
     this.libraryPage = Math.min(this.libraryPage, maxPage);
@@ -231,13 +247,15 @@ export class DeskScene extends Phaser.Scene {
       this.hud.add(book);
       if (compact) {
         this.label(String(this.libraryPage * perPage + index + 1).padStart(2, "0"), x + 28, y + 52, 23, 0, "#f5ead0", true);
-        this.label(passage.title, x + 94, y + 17, 20, cardWidth - 108, "#343b33", true);
-        this.label(passage.author, x + 96, y + 50, 11, cardWidth - 112, "#777766");
-        this.button(`open-${passage.id}`, "本をひらく →", x + 94, y + 88, cardWidth - 110, 34, () => { void this.openPassage(passage); });
+        this.title(passage.title, x + 94, y + (short ? 10 : 17), short ? 17 : 20, cardWidth - 108, "#343b33");
+        this.label(short ? passage.original.replace(/\n/g, "").slice(0, 16) + "…" : passage.author, x + 96, y + (short ? 35 : 50), 11, cardWidth - 112, "#777766");
+        if (!short) this.label(passage.original.replace(/\n/g, "").slice(0, 15) + "…", x + 96, y + 74, 10, cardWidth - 112, "#777766");
+        this.button(`open-${passage.id}`, "本をひらく →", x + 94, y + cardHeight - 44, cardWidth - 110, 34, () => { void this.openPassage(passage); });
       } else {
         this.label(String(this.libraryPage * perPage + index + 1).padStart(2, "0"), x + 31, y + 27, 12, 0, "#e8dabc");
-        this.label(passage.title, x + 32, y + 66, 27, cardWidth - 62, "#fbf1d9", true);
-        this.label(passage.author, x + 34, y + 121, 13, cardWidth - 64, "#e6dac2");
+        this.title(passage.title, x + 32, y + 57, 27, cardWidth - 62, "#fbf1d9", 2);
+        this.label(passage.author, x + 34, y + 148, 13, cardWidth - 64, "#e6dac2");
+        this.label(passage.original.replace(/\n/g, "").slice(0, 15) + "…", x + 34, y + 183, 11, cardWidth - 70, "#eadfc8");
         const motif = this.add.graphics().lineStyle(1, 0xf2e4bb, .5);
         const mx = x + cardWidth - 62, my = y + coverHeight - 51;
         // A shared printer's ornament, unrelated to manuscript order.
@@ -249,12 +267,13 @@ export class DeskScene extends Phaser.Scene {
     });
     if (!entries.length) this.label("この難易度の抜粋はありません。", margin, cardY, 16, span, "#f8f1df");
     const y = this.h - 59;
-    this.button("import", "原稿の追加", margin, y, compact ? 98 : 112, 36, () => this.openOverlay("import"));
-    this.button("books", "保存した本", margin + (compact ? 105 : 120), y, compact ? 98 : 112, 36, () => { this.reviewPage = 0; this.openOverlay("books"); });
+    const utilityWidth = compact ? Math.min(98, (span - 104) / 2) : 112;
+    this.button("import", "原稿の追加", margin, y, utilityWidth, 36, () => this.openOverlay("import"));
+    this.button("books", "保存した本", margin + utilityWidth + 8, y, utilityWidth, 36, () => { this.reviewPage = 0; this.openOverlay("books"); });
     if (maxPage) {
-      this.button("previous-page", "←", this.w - margin - 108, y, 32, 36, () => { this.libraryPage = Math.max(0, this.libraryPage - 1); this.render(); });
-      this.label(`${this.libraryPage + 1}/${maxPage + 1}`, this.w - margin - 67, y + 11, 11, 0, "#f8f1df");
-      this.button("next-page", "→", this.w - margin - 32, y, 32, 36, () => { this.libraryPage = Math.min(maxPage, this.libraryPage + 1); this.render(); });
+      this.button("previous-page", "←", this.w - margin - 88, y, 26, 36, () => { this.libraryPage = Math.max(0, this.libraryPage - 1); this.render(); });
+      this.label(`${this.libraryPage + 1}/${maxPage + 1}`, this.w - margin - 54, y + 11, 11, 0, "#f8f1df");
+      this.button("next-page", "→", this.w - margin - 26, y, 26, 36, () => { this.libraryPage = Math.min(maxPage, this.libraryPage + 1); this.render(); });
     }
   }
 
@@ -265,7 +284,7 @@ export class DeskScene extends Phaser.Scene {
     const background = this.add.graphics().fillStyle(MAT).fillRect(0, 0, this.w, this.top).fillRect(0, this.h - 60, this.w, 60);
     background.lineStyle(1, 0xd4c5a7, .22).lineBetween(24, this.top - 1, this.w - 24, this.top - 1).lineBetween(24, this.h - 60, this.w - 24, this.h - 60);
     this.hud.add(background);
-    this.label(problem.title, 24, 16, compact ? 21 : 25, compact ? this.w - 132 : this.w - 470, "#f8f1df", true);
+    this.title(problem.title, 24, 16, compact ? 21 : 25, compact ? this.w - 48 : this.w - 410, "#f8f1df");
     this.label(compact ? problem.author : `${problem.author}  /  ${RULES[problem.difficulty].label}`, 26, compact ? 49 : 52, 11, 150, "#b9c4b4");
     const labels = [["review", "原文", () => { this.reviewPage = 0; this.openOverlay("review"); }], ["undo", "戻す", () => this.apply({ type: "undo" })], ["overview", "机全体", () => this.overview()], ["settings", "設定", () => this.openOverlay("settings")]] as const;
     const bw = compact ? (this.w - 48) / 4 : 82;
@@ -282,7 +301,7 @@ export class DeskScene extends Phaser.Scene {
     } else {
       this.button("help", "手引き", 24, y, 70, 38, () => this.openOverlay("help"));
       const text = this.selected ? "相手の端へ" : "紙片を選ぶ";
-      this.label(compact ? text : this.notice || `${text}  /  余白を動かして探す`, 112, y + 11, 12, this.w - 228, "#d3d7c7");
+      this.label(compact ? this.selected ? text : "余白で移動・紙片を選ぶ" : this.notice || `${text}  /  余白を動かして探す`, 112, y + 11, 12, this.w - 228, "#d3d7c7");
     }
     this.button("library", "本棚", this.w - 92, y, 68, 38, () => this.assembling ? this.openOverlay("leave") : this.leave());
   }
@@ -451,7 +470,7 @@ export class DeskScene extends Phaser.Scene {
 
   private clearPapers(): void {
     for (const view of this.views.values()) { this.tweens.killTweensOf(view.paper); view.paper.destroy(); }
-    this.views.clear(); this.manuscript?.destroy(); this.manuscript = undefined; this.ports.clear();
+    this.views.clear(); this.manuscript?.destroy(); this.manuscript = undefined; this.manuscriptFrame?.destroy(); this.manuscriptFrame = undefined; this.ports.clear();
   }
 
   private syncPaper(): void {
@@ -460,11 +479,24 @@ export class DeskScene extends Phaser.Scene {
       for (const view of this.views.values()) { this.tweens.killTweensOf(view.paper); view.paper.destroy(); }
       this.views.clear(); this.ports.clear();
       this.manuscript?.destroy();
-      this.manuscript = new Paper(this, this.session.problem.original, this.columns).setPosition(30, 24);
-      this.world.add(this.manuscript);
+      this.manuscriptFrame?.destroy();
+      this.manuscript = new Paper(this, this.session.problem.original, this.columns).setPosition(30, 94);
+      const { width, height } = this.manuscript;
+      const complete = this.session.state.phase === "complete";
+      this.manuscriptFrame = this.add.container(30, 20);
+      const backing = this.add.graphics();
+      backing.fillStyle(0x18291f, .17).fillRect(3, 6, width, height + 142);
+      backing.fillStyle(PAPER).fillRect(0, 0, width, height + 142);
+      backing.lineStyle(1, 0xa96555, .35).lineBetween(14, 59, width - 14, 59);
+      const heading = this.add.text(15, 20, complete ? "読了" : "原稿を読む", { fontFamily: "DeskSans", fontSize: "13px", color: "#8f5140" });
+      const title = this.add.text(width - 16, 22, this.session.problem.author, { fontFamily: "DeskSans", fontSize: "11px", color: "#74715f" }).setOrigin(1, 0);
+      const footer = this.add.text(15, height + 103, complete ? "一枚の原稿に戻りました。" : "読み終えたら、自分のペースで。", { fontFamily: "DeskSans", fontSize: "11px", color: "#74715f" });
+      this.manuscriptFrame.add([backing, heading, title, footer]);
+      this.world.add([this.manuscriptFrame, this.manuscript]);
       return;
     }
     this.manuscript?.destroy(); this.manuscript = undefined;
+    this.manuscriptFrame?.destroy(); this.manuscriptFrame = undefined;
     const byTile = new Map(this.session.problem.tiles.map((tile) => [tile.id, tile.text]));
     const active = new Set(this.session.state.chains.map((chain) => chain.id));
     for (const [id, view] of this.views) if (!active.has(id)) { this.tweens.killTweensOf(view.paper); view.paper.destroy(); this.views.delete(id); }
@@ -492,11 +524,10 @@ export class DeskScene extends Phaser.Scene {
     this.focused = undefined;
     this.syncPaper();
     this.boardCamera.setZoom(1).setScroll(0, 0);
-    if (!this.reduced) [...this.views.values()].forEach(({ paper }, index) => {
-      const y = paper.y;
-      paper.y -= 9;
-      this.tweens.add({ targets: paper, y, duration: 210, delay: Math.min(index * 14, 140), ease: "Cubic.Out" });
-    });
+    if (!this.reduced) for (const { paper } of this.views.values()) {
+      paper.lift(false);
+      paper.settle(true);
+    }
     playCue(this, "land", this.volume); this.render();
   }
 
@@ -514,7 +545,7 @@ export class DeskScene extends Phaser.Scene {
     this.syncPaper();
     if (event === "complete") this.readingCamera();
     else if (wasComplete && event === "undo") this.overview();
-    const paper = this.selected ? this.views.get(this.selected)?.paper : this.manuscript;
+    const paper = this.manuscript ?? (this.selected ? this.views.get(this.selected)?.paper : undefined);
     if (paper && ["new", "extend", "bridge", "complete"].includes(event)) paper.confirm(!this.reduced);
     else paper?.settle(!this.reduced);
     playCue(this, event, this.volume); this.render();
@@ -650,6 +681,19 @@ export class DeskScene extends Phaser.Scene {
     }
     this.target = current && (!nearest || nearest.distance + 10 >= current.distance) ? current : nearest;
     this.syncSelection();
+  }
+
+  update(_time: number, delta: number): void {
+    if (this.overlay || this.busy || this.pinch || this.gesture?.kind !== "paper" || !this.gesture.moved) return;
+    const pointer = this.input.activePointer;
+    if (!pointer.isDown || !this.onBoard(pointer)) return;
+    const edge = 30;
+    const drift = (value: number, min: number, max: number) => value < min + edge ? -(min + edge - value) / edge : value > max - edge ? (value - max + edge) / edge : 0;
+    const dx = drift(pointer.x, 0, this.w), dy = drift(pointer.y, this.top, this.h - 60);
+    if (!dx && !dy) return;
+    const speed = Math.min(delta, 32) * .36 / this.boardCamera.zoom;
+    this.boardCamera.setScroll(this.boardCamera.scrollX + dx * speed, this.boardCamera.scrollY + dy * speed);
+    this.onMove(pointer);
   }
 
   private onUp(pointer: Phaser.Input.Pointer): void {
