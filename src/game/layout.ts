@@ -32,3 +32,19 @@ export function layoutManuscript(text: string, columns: number): ManuscriptLayou
   const usedColumns = Math.max(1, Math.ceil(widest));
   return { glyphs, columns: usedColumns, rows: row + 1, width: usedColumns * CELL + PAD * 2, height: (row + 1) * CELL + PAD * 2 };
 }
+
+// Deal in the already shuffled order. Pack by actual paper width, never by the
+// source sentence or fixed column count; narrow screens grow downward, not sideways.
+export function dealManuscript(texts: readonly string[], columns: number, viewportWidth: number): { x: number; y: number }[] {
+  const margin = 32, gap = 38;
+  const available = Math.max(260, viewportWidth - margin * 2);
+  let x = 0, y = 32, rowHeight = 0;
+  return texts.map((text) => {
+    const paper = layoutManuscript(text, columns);
+    if (x > 0 && x + paper.width > available) { x = 0; y += rowHeight + gap; rowHeight = 0; }
+    const point = { x: margin + x, y };
+    x += paper.width + gap;
+    rowHeight = Math.max(rowHeight, paper.height);
+    return point;
+  });
+}
