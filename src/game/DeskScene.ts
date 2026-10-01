@@ -11,6 +11,8 @@ import type { DeskSnapshot, HostBridge } from "./bridge.ts";
 
 export const UI_TEXT = `余白で移動・紙片を選ぶ 相手の端へ 読み終えたら、自分のペースで。 言葉をほどき、情景をもどす。 一冊を選んで、記憶のつづきを。 はじめの一節 本をひらく 原稿を伏せて、はじめる つながるたび、情景になる。 ゆっくり読む ひと息ついて読み返す 復元できました 読了 つなぐ ここに置く 紙片を選んで、相手の端へ。 仮のつながり 切れ目で外せます 確定まであと この先にも紙片があります 余白を動かして探す 紙片 残り 一節 しおり この原稿は 読む 組む 仕上がり · ↖ ↗ ↙ ↘ ↓ ← ＋ − × 確定 練習 音を消す 音を出す 手引き 同じ一節で遊ぶ ` + `青空の修復机 記憶をたよりに言葉をつなぐ 原稿を読む 組み立てる 原文 戻す 机全体 設定 本棚 前 後 頁 次 閉じる 作品を取り込む 作品カードURL 貼り付ける 取り込み 再取り込み 保存した本 削除 本を削除しますか 保存した抜粋だけを削除します 戻る この本を削除 この原稿を閉じますか 組立途中の配置は保存されません 原稿に戻る 本棚へ 音量 小 大 音なし 動きを控える 有効 無効 机へ戻る 出典 もう一度 読み終えたら組み立ててください。机の余白をドラッグすると原稿を動かせます。好きな箇所から、紙片をつないでください。切れ目をタップすると仮組みを外せます。選んだ紙片を相手の前か後につなぎます。一枚の原稿に戻りました。好きなところから読み返してください。紙片がつながりました。少し長い仮組みを作ってみましょう。原文を手掛かりに組み直せます。仮の切れ目を外しました。一つ前の操作に戻しました。準備中です。読み込めませんでした。再試行 旧保存形式です。元の作品カードから再取り込みしてください。まだ保存した本はありません。この難易度の抜粋はありません。同じ原稿で連結枚数を比較 原稿の追加 このブラウザでは音を利用できません。表示できない文字があります。読み込みを完了できませんでした。接続と保存設定を確認してください。原文は変更していません。自然な文のまとまりで出題できる抜粋が見つかりませんでした。別の作品を選んでください。作品取り込み先が未設定です。推奨原稿は通信なしで選べます。原稿を保存しました。削除しました。操作の手引き 紙片を選ぶ 確定した部分 仮組み 選択した紙片を前につなぐ 選択した紙片を後につなぐ 原文を見る 原稿の端は左が前、右が後です。選択してから端をタップしてもつながります。机の余白をドラッグ、二本指かホイールで拡大縮小。矢印で選択先を移動、Enterで紙片を選び、[と]で前後につなぎます。Deleteで仮の切れ目を外し、Zで戻す、Rで原文、Escで取消。青空文庫の作品カードのURLを貼り付けてください。保存された原文は削除されません。ページ 再読 回 音 書体 対応 接続 失敗 理由 変更 不正 入力 一覧 完了 キャンセル 再開 中止 続ける 生成 取得 表示 難易度 枚 印刷 小さい 大きい 紙片 未接続 この原稿の新規確定は枚です。ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 /:.-_+[]()%…「」、。→`;
 
+export const passagePreview = (text: string): string => graphemes(text.replace(/\n/g, "")).slice(0, 16).join("") + "…";
+
 type Overlay = "review" | "settings" | "import" | "leave" | "books" | "delete" | "help";
 type View = { paper: Paper; signature: string };
 type Target = { id: string; side: "before" | "after"; distance: number; point: Point };
@@ -117,8 +119,8 @@ export class DeskScene extends Phaser.Scene {
     return label;
   }
 
-  private title(text: string, x: number, y: number, size: number, width: number, color: string, lines = 1): Phaser.GameObjects.Text {
-    const label = this.label(text, x, y, size, width, color, true);
+  private fitLabel(text: string, x: number, y: number, size: number, width: number, color: string, lines = 1, serif = true): Phaser.GameObjects.Text {
+    const label = this.label(text, x, y, size, width, color, serif);
     const limit = size * 1.3 * lines + 6 * (lines - 1);
     if (label.height <= limit) return label;
     const chars = graphemes(text);
@@ -247,15 +249,15 @@ export class DeskScene extends Phaser.Scene {
       this.hud.add(book);
       if (compact) {
         this.label(String(this.libraryPage * perPage + index + 1).padStart(2, "0"), x + 28, y + 52, 23, 0, "#f5ead0", true);
-        this.title(passage.title, x + 94, y + (short ? 10 : 17), short ? 17 : 20, cardWidth - 108, "#343b33");
-        this.label(short ? passage.original.replace(/\n/g, "").slice(0, 16) + "…" : passage.author, x + 96, y + (short ? 35 : 50), 11, cardWidth - 112, "#777766");
-        if (!short) this.label(passage.original.replace(/\n/g, "").slice(0, 15) + "…", x + 96, y + 74, 10, cardWidth - 112, "#777766");
+        this.fitLabel(passage.title, x + 94, y + (short ? 10 : 17), short ? 17 : 20, cardWidth - 108, "#343b33");
+        this.fitLabel(short ? passagePreview(passage.original) : passage.author, x + 96, y + (short ? 35 : 50), 11, cardWidth - 112, "#777766", 1, false);
+        if (!short) this.fitLabel(passagePreview(passage.original), x + 96, y + 74, 10, cardWidth - 112, "#777766", 1, false);
         this.button(`open-${passage.id}`, "本をひらく →", x + 94, y + cardHeight - 44, cardWidth - 110, 34, () => { void this.openPassage(passage); });
       } else {
         this.label(String(this.libraryPage * perPage + index + 1).padStart(2, "0"), x + 31, y + 27, 12, 0, "#e8dabc");
-        this.title(passage.title, x + 32, y + 57, 27, cardWidth - 62, "#fbf1d9", 2);
+        this.fitLabel(passage.title, x + 32, y + 57, 27, cardWidth - 62, "#fbf1d9", 2);
         this.label(passage.author, x + 34, y + 148, 13, cardWidth - 64, "#e6dac2");
-        this.label(passage.original.replace(/\n/g, "").slice(0, 15) + "…", x + 34, y + 183, 11, cardWidth - 70, "#eadfc8");
+        this.fitLabel(passagePreview(passage.original), x + 34, y + 183, 11, cardWidth - 70, "#eadfc8", 1, false);
         const motif = this.add.graphics().lineStyle(1, 0xf2e4bb, .5);
         const mx = x + cardWidth - 62, my = y + coverHeight - 51;
         // A shared printer's ornament, unrelated to manuscript order.
@@ -284,7 +286,7 @@ export class DeskScene extends Phaser.Scene {
     const background = this.add.graphics().fillStyle(MAT).fillRect(0, 0, this.w, this.top).fillRect(0, this.h - 60, this.w, 60);
     background.lineStyle(1, 0xd4c5a7, .22).lineBetween(24, this.top - 1, this.w - 24, this.top - 1).lineBetween(24, this.h - 60, this.w - 24, this.h - 60);
     this.hud.add(background);
-    this.title(problem.title, 24, 16, compact ? 21 : 25, compact ? this.w - 48 : this.w - 410, "#f8f1df");
+    this.fitLabel(problem.title, 24, 16, compact ? 21 : 25, compact ? this.w - 48 : this.w - 410, "#f8f1df");
     this.label(compact ? problem.author : `${problem.author}  /  ${RULES[problem.difficulty].label}`, 26, compact ? 49 : 52, 11, 150, "#b9c4b4");
     const labels = [["review", "原文", () => { this.reviewPage = 0; this.openOverlay("review"); }], ["undo", "戻す", () => this.apply({ type: "undo" })], ["overview", "机全体", () => this.overview()], ["settings", "設定", () => this.openOverlay("settings")]] as const;
     const bw = compact ? (this.w - 48) / 4 : 82;
@@ -399,7 +401,7 @@ export class DeskScene extends Phaser.Scene {
   private async loadBooks(): Promise<void> {
     try {
       const books = await readBooks();
-      await prepareFont(books.map((book) => `${book.title}${book.author}`).join(""), "DeskSans");
+      await prepareFont(books.map((book) => `${book.title}${book.author}${isCurrent(book) ? book.passages.map((passage) => passagePreview(passage.original)).join("") : ""}`).join(""), "DeskSans");
       await prepareFont(books.map((book) => book.title).join(""), "DeskSerif");
       if (!this.alive) return;
       this.saved = books;
@@ -439,7 +441,7 @@ export class DeskScene extends Phaser.Scene {
     try {
       const book = await importWork(value, controller.signal);
       // Check all saved excerpts before replacing any legacy/current record.
-      await prepareText(book.title + book.passages.map((passage) => passage.original).join(""), book.title + book.author);
+      await prepareText(book.title + book.passages.map((passage) => passage.original).join(""), book.title + book.author + book.passages.map((passage) => passagePreview(passage.original)).join(""));
       book.passages.forEach((passage) => makeProblem(passage));
       if (!this.alive || request !== this.serial) return;
       await saveBook(book);

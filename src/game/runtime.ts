@@ -1,11 +1,11 @@
 import Phaser from "phaser";
-import { DeskScene, UI_TEXT } from "./DeskScene.ts";
+import { DeskScene, UI_TEXT, passagePreview } from "./DeskScene.ts";
 import { prepareFont } from "./fonts.ts";
 import { PASSAGES } from "../data/passages.ts";
 import type { GamePort, HostBridge } from "./bridge.ts";
 
 export async function startGame(parent: HTMLElement, bridge: HostBridge, signal: AbortSignal): Promise<GamePort> {
-  await prepareFont(UI_TEXT + PASSAGES.map((passage) => passage.title + passage.author + passage.original.slice(0, 30)).join(""), "DeskSans");
+  await prepareFont(UI_TEXT + PASSAGES.map((passage) => passage.title + passage.author + passagePreview(passage.original)).join(""), "DeskSans");
   await prepareFont("…0123456789青空の修復机" + PASSAGES.map((passage) => passage.title).join(""), "DeskSerif");
   signal.throwIfAborted();
   return new Promise((resolve, reject) => {
