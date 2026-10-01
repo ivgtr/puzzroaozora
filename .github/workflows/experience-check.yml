@@ -1,5 +1,5 @@
-# Temporary evidence workflow. Remove with scripts/passage-balance-check.mjs afterward.
-name: Passage balance verification (temporary)
+# Temporary browser evidence. Remove with scripts/play-area-check.mjs afterward.
+name: Play area verification (temporary)
 on:
   pull_request:
     branches: [codex/issue-1-manuscript-desk]
@@ -9,41 +9,51 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          fetch-depth: 1
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - run: npm ci --no-audit --no-fund
       - run: npm test && npm run lint && npm run typecheck && npm run build
-      - name: Prepare isolated browser and production server
+      - name: Prepare browser and same-content baseline
         run: |
           npm install --prefix /tmp/browser --no-audit --no-fund playwright@1.58.2
           /tmp/browser/node_modules/.bin/playwright install --with-deps chromium
-          mkdir -p /tmp/evidence
+          mkdir -p /tmp/evidence /tmp/baseline
+          git archive 98e4af06ab2d82b3ee03f6d2b94740a14dff60aa | tar -x -C /tmp/baseline
+          ln -s "$GITHUB_WORKSPACE/node_modules" /tmp/baseline/node_modules
+          (cd /tmp/baseline && npm run build) > /tmp/baseline-build.log 2>&1 || { cat /tmp/baseline-build.log; exit 1; }
           npm start -- -H 127.0.0.1 -p 5678 > /tmp/server.log 2>&1 &
-          ready=0
-          for i in $(seq 1 90); do
-            if curl -fsS http://127.0.0.1:5678 >/dev/null; then ready=1; break; fi
-            sleep 1
+          (cd /tmp/baseline && npm start -- -H 127.0.0.1 -p 5679) > /tmp/baseline-server.log 2>&1 &
+          for port in 5678 5679; do
+            ready=0
+            for i in $(seq 1 90); do
+              if curl -fsS "http://127.0.0.1:$port" >/dev/null; then ready=1; break; fi
+              sleep 1
+            done
+            test "$ready" = 1 || { cat /tmp/server.log /tmp/baseline-server.log; exit 1; }
           done
-          test "$ready" = 1 || { cat /tmp/server.log; exit 1; }
-      - name: Fifteen solves and new excerpt desktop and touch checks
+      - name: Actual desktop and touch play-area checks
         env:
           APP_URL: http://127.0.0.1:5678
+          BASELINE_URL: http://127.0.0.1:5679
+          BASELINE_REF: 98e4af06ab2d82b3ee03f6d2b94740a14dff60aa
           PLAYWRIGHT_MODULE: /tmp/browser/node_modules/playwright/index.mjs
           EVIDENCE_DIR: /tmp/evidence
-        run: node --experimental-strip-types scripts/passage-balance-check.mjs
-      - name: Evidence and production server log
+        run: node --experimental-strip-types scripts/play-area-check.mjs
+      - name: Evidence and production logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: passage-balance-verification
+          name: play-area-verification
           path: |
             /tmp/evidence/
             /tmp/server.log
+            /tmp/baseline-build.log
+            /tmp/baseline-server.log
           retention-days: 7
