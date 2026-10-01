@@ -6,7 +6,7 @@ import type { Point } from "./model.ts";
 export const INK = 0x292c25;
 export const PAPER = 0xf8f2e3;
 export const GRID = 0xa96555;
-export const MAT = 0xe7e9df;
+export const MAT = 0xccd3c7;
 export interface Seam extends Point { boundary: number }
 let serial = 0;
 

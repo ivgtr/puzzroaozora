@@ -9,7 +9,7 @@ import { Paper, PAPER, MAT } from "./paper.ts";
 import { playCue, prepareSounds } from "./sound.ts";
 import type { DeskSnapshot, HostBridge } from "./bridge.ts";
 
-export const UI_TEXT = `つなぎ方 読了 枚の紙片 ↗ 青空の修復机 三つの情景 紙片から、一節をつなぐ。 つなぐ 手掛かり 読み通す 別の情景 同じ情景 もう一度 つながりを見直す 原文 出典を読む 全体 戻す 操作 音と動き 設定 閉じる 以前の保存 保存した本 作品の取り込みは休止しています。保存データはそのまま残っています。新しいルールでは、手で選び直した三つの情景で遊べます。 この情景を離れますか 途中の配置は保存されません。 続ける 選び直す 一枚の原稿になりました。 紙片を選び、相手の端へ 余白を動かすと、ほかの紙片が見つかります 左端が前、右端が後。選んだ紙片をつなぎます。 切れ目をタップして、いつでも外せます。 つながりを作りました。 つながりを外しました。 一つ前の操作に戻しました。 原文とは、まだ少し違うようです。切れ目を外して読み直してみましょう。 ひとつにつながりました。読み通して確かめましょう。 音量 小 大 音なし 動きを控える 有効 無効 このブラウザでは音を利用できません。 紙片をドラッグして、相手の端へ。 紙片を選んでから相手の端をタップしてもつながります。 正誤は最後に読み通すまで分かりません。 選んだ紙片の切れ目をタップすると外せます。 余白をドラッグして移動。二本指・ホイールで拡大縮小。 矢印で移動、Enterで選択、[ と ]で前後へ。 Deleteで分離、Zで戻す、Hで手引き、Escで取消。 次の手掛かり 前へ 次へ 準備中です。 読み込めませんでした。 読み込みを完了できませんでした。 段落の順序を確かめる 紙片 残り 組 つながり 確認 正解の場所は示しません まだ保存した本はありません。 記録 この三問は手作業で選んだ抜粋です。 答えは、つなぎ終えたあとに。 選択した紙片を前につなぐ 選択した紙片を後につなぐ 番目の切れ目を外す 01 02 03 / · ← → ＋ − × … ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789[]()%「」、。`;
+export const UI_TEXT = `紙片をひろげる つなぎ方 読了 枚の紙片 ↗ 青空の修復机 三つの情景 紙片から、一節をつなぐ。 つなぐ 手掛かり 読み通す 別の情景 同じ情景 もう一度 つながりを見直す 原文 出典を読む 全体 戻す 操作 音と動き 設定 閉じる 以前の保存 保存した本 作品の取り込みは休止しています。保存データはそのまま残っています。新しいルールでは、手で選び直した三つの情景で遊べます。 この情景を離れますか 途中の配置は保存されません。 続ける 選び直す 一枚の原稿になりました。 紙片を選び、相手の端へ 余白を動かすと、ほかの紙片が見つかります 左端が前、右端が後。選んだ紙片をつなぎます。 切れ目をタップして、いつでも外せます。 つながりを作りました。 つながりを外しました。 一つ前の操作に戻しました。 原文とは、まだ少し違うようです。切れ目を外して読み直してみましょう。 ひとつにつながりました。読み通して確かめましょう。 音量 小 大 音なし 動きを控える 有効 無効 このブラウザでは音を利用できません。 紙片をドラッグして、相手の端へ。 紙片を選んでから相手の端をタップしてもつながります。 正誤は最後に読み通すまで分かりません。 選んだ紙片の切れ目をタップすると外せます。 余白をドラッグして移動。二本指・ホイールで拡大縮小。 矢印で移動、Enterで選択、[ と ]で前後へ。 Deleteで分離、Zで戻す、Hで手引き、Escで取消。 次の手掛かり 前へ 次へ 準備中です。 読み込めませんでした。 読み込みを完了できませんでした。 段落の順序を確かめる 紙片 残り 組 つながり 確認 正解の場所は示しません まだ保存した本はありません。 記録 この三問は手作業で選んだ抜粋です。 答えは、つなぎ終えたあとに。 選択した紙片を前につなぐ 選択した紙片を後につなぐ 番目の切れ目を外す 01 02 03 / · ← → ＋ − × … ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789[]()%「」、。`;
 
 type Overlay = "settings" | "leave" | "books" | "help" | "hint";
 type View = { paper: Paper; signature: string };
@@ -201,8 +201,8 @@ export class DeskScene extends Phaser.Scene {
     const compact = this.w < 700;
     const short = this.h < 580;
     const passage = PASSAGES[this.libraryPage % PASSAGES.length];
-    const width = Math.min(620, this.w - 40);
-    const height = Math.min(short ? 292 : 472, this.h - 132);
+    const width = Math.min(600, this.w - 48);
+    const height = Math.min(short ? 246 : compact ? 342 : 286, this.h - 132);
     const x = (this.w - width) / 2, y = Math.max(68, (this.h - height) / 2 - 14);
     const ground = this.add.graphics().fillStyle(MAT).fillRect(0, 0, this.w, this.h);
     // The same unbounded working surface holds the invitation and the puzzle.
@@ -211,18 +211,27 @@ export class DeskScene extends Phaser.Scene {
     this.label("青空の修復机", 28, 20, 12, 0, "#637267");
     this.button("settings", "音と動き", this.w - 118, 10, 90, 44, () => this.openOverlay("settings"));
     this.panel(x, y, width, height);
-    const margin = compact ? 28 : 54;
+    const margin = compact ? 28 : 40;
     this.label(`0${this.libraryPage + 1}  /  03`, x + margin, y + 28, 11, 0, "#8b7463");
     this.label("三つの情景", x + width - margin - 70, y + 28, 11, 0, "#8b7463");
-    const titleY = y + (short ? 74 : 116);
+    const titleY = y + (short ? 65 : compact ? 80 : 62);
     this.fitLabel(passage.sceneTitle, x + margin - 2, titleY, compact ? 32 : 44, width - margin * 2, "#33483e", 2);
-    this.label(`${passage.title}  ·  ${passage.author}`, x + margin, titleY + (short ? 49 : compact ? 68 : 74), compact ? 11 : 12, width - margin * 2, "#727668");
-    if (!short) this.label(passage.premise, x + margin, y + height - 165, compact ? 13 : 14, width - margin * 2, "#626e61", true);
-    const rule = this.add.graphics().lineStyle(1, 0xaa6652, .42).lineBetween(x + margin, y + height - 83, x + width - margin, y + height - 83);
+    this.label(`${passage.title}  ·  ${passage.author}`, x + margin, titleY + (compact ? 55 : 64), compact ? 11 : 12, width - margin * 2, "#727668");
+    if (!short) this.label(passage.premise, x + margin, y + (compact ? 186 : 166), 13, width - margin * 2, "#626e61", true);
+    const rule = this.add.graphics().lineStyle(1, 0xaa6652, .42).lineBetween(x + margin, y + height - 65, x + width - margin, y + height - 65);
     this.hud.add(rule);
-    this.label(`${passage.fragments.length} 枚の紙片`, x + margin, y + height - 53, 12, 0, "#7d7b6c");
-    this.button(`open-${passage.id}`, "つなぐ →", x + width - margin - 126, y + height - 71, 126, 48, () => { void this.openPassage(passage); }, true);
-    this.actions.get(`open-${passage.id}`)!.label = `${passage.sceneTitle}（${passage.title}）をつなぐ`;
+    this.label(`${passage.fragments.length} 枚の紙片`, x + margin, y + height - 42, 12, 0, "#7d7b6c");
+    this.label("紙片をひろげる →", x + width - margin - 133, y + height - 42, 13, 0, "#354c42");
+    const id = `open-${passage.id}`;
+    const bounds = new Phaser.Geom.Rectangle(x, y, width, height);
+    this.actions.set(id, { label: `${passage.sceneTitle}（${passage.title}）の紙片をひろげる`, invoke: () => { void this.openPassage(passage); }, bounds });
+    const sheet = this.add.zone(x, y, width, height).setOrigin(0).setInteractive();
+    let armed = false;
+    sheet.on("pointerover", () => { this.game.canvas.style.cursor = "pointer"; });
+    sheet.on("pointerdown", () => { armed = true; this.game.canvas.focus({ preventScroll: true }); });
+    sheet.on("pointerout", () => { armed = false; this.game.canvas.style.cursor = "default"; });
+    sheet.on("pointerup", () => { if (armed) { armed = false; this.dispatch(id); } });
+    this.hud.add(sheet);
     const navY = y + height + 16;
     const navWidth = Math.min(120, (this.w - 40) / 3);
     const navX = (this.w - navWidth * 3) / 2;
@@ -423,7 +432,8 @@ Deleteで分離、Zで戻す、Hで手引き、Escで取消。`, x + 28, bottom 
 
   private begin(): void {
     if (!this.session || this.session.state.phase !== "reading") return;
-    const positions = dealManuscript(this.session.problem.tiles.map((tile) => tile.text), this.columns, this.w);
+    const columns = Math.max(8, Math.min(16, Math.floor((this.w - 88) / CELL)));
+    const positions = dealManuscript(this.session.problem.tiles.map((tile) => tile.text), columns, this.w);
     this.session.begin(positions);
     this.notice = "";
     this.focused = undefined;

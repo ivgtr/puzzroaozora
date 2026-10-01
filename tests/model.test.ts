@@ -164,6 +164,15 @@ test("a new session safely replays an unchanged problem after completion", () =>
     assert.equal(next.canCheck, false);
     conserved(next);
     assert.throws(() => next.begin(next.problem.tiles.map(() => ({ x: 0, y: 0 }))));
+    const first = next.state.chains.find((chain) => next.text(chain) === "A")!;
+    for (const text of "BCDEFGH") {
+      const source = next.state.chains.find((chain) => next.text(chain) === text)!;
+      assert.equal(next.dispatch({ type: "join", source: source.id, target: first.id, side: "after" }), "tentative");
+    }
+    assert.equal(next.dispatch({ type: "check" }), "complete");
+    assert.equal(next.dispatch({ type: "undo" }), "undo");
+    assert.equal(next.dispatch({ type: "check" }), "complete");
+    conserved(next);
   }
   assert.equal(session.state.phase, "complete");
 });

@@ -19,7 +19,7 @@ try {
  page=await desktop.newPage();page.on('pageerror',e=>errors.push(e.stack));
  await page.goto('http://127.0.0.1:5678');await mode('selection');await shot('desktop-selection');await noAnswer();
  // Canvas invitation hit area, with no DOM helper.
- await page.mouse.click(833,575);await mode('assembling');await shot('desktop-desk');await noAnswer();
+ await page.mouse.click(700,410);await mode('assembling');await shot('desktop-desk');await noAnswer();
  const start=await pieces(),pos=dealManuscript(start.map(p=>p.text),16,1280),a=layoutManuscript(start[0].text,16),b=layoutManuscript(start[1].text,16);
  const sx=pos[1].x+22;
  await page.mouse.move(sx,pos[1].y+b.glyphs[0].y+CELL/2+76);await page.mouse.down();
@@ -52,14 +52,14 @@ try {
  }
  await desktop.close();
  const mobile=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true});page=await mobile.newPage();page.on('pageerror',e=>errors.push(e.stack));
- await page.goto('http://127.0.0.1:5678');await mode('selection');await shot('mobile-selection');await page.touchscreen.tap(279,583);await mode('assembling');await shot('mobile-desk');
+ await page.goto('http://127.0.0.1:5678');await mode('selection');await shot('mobile-selection');await page.touchscreen.tap(210,400);await mode('assembling');await shot('mobile-desk');
  const mp=await pieces(),pp=dealManuscript(mp.map(p=>p.text),10,390),ml=layoutManuscript(mp[1].text,10);
  await page.touchscreen.tap(pp[0].x+24,pp[0].y+28.5+76);await page.touchscreen.tap(pp[1].x+ml.width,pp[1].y+ml.glyphs.at(-1).y+CELL/2+76);assert.equal((await pieces()).length,mp.length-1);await shot('mobile-joined');await action('undo');
  const cdp=await mobile.newCDPSession(page);await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:60,y:210},{x:250,y:430}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:45,y:195},{x:270,y:450}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});assert.equal((await pieces()).length,mp.length);
  await action('hint');await action('close');await action('overview');await shot('mobile-overview');
  await page.setViewportSize({width:844,height:390});await shot('landscape-desk');assert.equal(await page.locator('canvas').count(),1);await page.setViewportSize({width:390,height:844});
  let chain=passages[0].fragments[0];for(const text of passages[0].fragments.slice(1)){await join(chain,text);chain+=text;}await mode('assembling');await shot('mobile-assembled');await action('check');await mode('complete');await shot('mobile-complete');
- await action('library');await mode('selection');await page.setViewportSize({width:320,height:568});await shot('small-selection');await page.touchscreen.tap(244,385);await mode('assembling');await shot('small-desk');
+ await action('library');await mode('selection');await page.setViewportSize({width:320,height:568});await shot('small-selection');await page.touchscreen.tap(210,300);await mode('assembling');await shot('small-desk');
  checks.push('Actual mobile invitation, tap-to-join, undo, pinch without accidental join, portrait/landscape resize, completion; 320px entry');
  assert.deepEqual(errors,[]);fs.writeFileSync('/tmp/evidence/results.json',JSON.stringify({checks,errors,desktop:'1280x800 DPR2',mobile:'390x844 DPR2; 844x390 rotation; 320x568',note:'Representative real pointer/touch controls; all-scene full assembly uses the shared accessible Session commands. No physical-device/listening/human-playtest claim.'},null,2));
 } catch(error){if(page){await page.screenshot({path:'/tmp/evidence/failure.png'});fs.writeFileSync('/tmp/evidence/failure.txt',await page.locator('body').innerText()+'\n'+JSON.stringify(errors));}throw error;}

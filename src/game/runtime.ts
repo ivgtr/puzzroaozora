@@ -35,7 +35,7 @@ export async function startGame(parent: HTMLElement, bridge: HostBridge, signal:
         parent,
         width: parent.clientWidth,
         height: parent.clientHeight,
-        backgroundColor: "#e7e9df",
+        backgroundColor: "#ccd3c7",
         scene,
         autoFocus: false,
         disableContextMenu: true,

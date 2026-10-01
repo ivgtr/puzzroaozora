@@ -26,6 +26,14 @@ test("three curated scenes preserve source text and provide atmosphere plus reas
   }
 });
 
+test("lemon's reason and contrast stay together instead of forming independently rotatable sentence groups", () => {
+  const passage = PASSAGES.find((scene) => scene.id === "lemon-shop-v3")!;
+  assert.equal(passage.fragments.length, 8);
+  // Splitting here allowed the shop's prior history to precede that day's purchase.
+  assert.ok(passage.fragments.some((fragment) => fragment.includes("出ていたのだ。檸檬などごくありふれている。がその店というのも")));
+  assert.ok(passage.fragments.includes("珍しい檸檬が"));
+});
+
 test("graphemes, source line breaks, half-width Latin, and square grid stay separate", () => {
   const text = "「𠮷がABC、小っ。」\n旧かな。";
   assert.ok(graphemes(text).includes("が"));
