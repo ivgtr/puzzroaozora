@@ -236,7 +236,7 @@ export class DeskScene extends Phaser.Scene {
     const navWidth = Math.min(120, (this.w - 40) / 3);
     const navX = (this.w - navWidth * 3) / 2;
     PASSAGES.forEach((item, index) => {
-      this.button(`scene-${index}`, `0${index + 1}  ${item.sceneTitle}`, navX + index * navWidth, navY, navWidth, 44, () => { this.libraryPage = index; this.notice = ""; this.render(); });
+      this.button(`scene-${index}`, this.w < 380 ? item.sceneTitle : `0${index + 1}  ${item.sceneTitle}`, navX + index * navWidth, navY, navWidth, 44, () => { this.libraryPage = index; this.notice = ""; this.render(); });
       if (index === this.libraryPage) {
         const mark = this.add.graphics().fillStyle(0xa05c47).fillCircle(navX + index * navWidth + navWidth / 2, navY + 45, 2);
         this.hud.add(mark);
@@ -262,7 +262,6 @@ export class DeskScene extends Phaser.Scene {
     const y = this.h - 61;
     if (session.canUndo) this.button("undo", "戻す", 14, y, 78, 44, () => this.apply({ type: "undo" }));
     if (complete) {
-      this.label("一枚の原稿になりました。", 24, this.h - 108, 12, this.w - 48, "#647465");
       this.button("source", "出典を読む ↗", this.w / 2 - Math.min(152, this.w - 216) / 2, y, Math.min(152, this.w - 216), 44, () => window.open(problem.sourceUrl, "_blank", "noopener,noreferrer"), true);
       this.button("again", "もう一度", this.w - 104, y, 90, 44, () => { if (this.currentPassage) void this.openPassage(this.currentPassage); });
     } else {
@@ -397,7 +396,7 @@ Deleteで分離、Zで戻す、Hで手引き、Escで取消。`, x + 28, bottom 
       this.manuscriptFrame?.destroy();
       this.manuscript = new Paper(this, this.session.problem.original, this.columns).setPosition(30, 94);
       const { width, height } = this.manuscript;
-            this.manuscriptFrame = this.add.container(30, 20);
+      this.manuscriptFrame = this.add.container(30, 20);
       const backing = this.add.graphics();
       backing.fillStyle(0x18291f, .17).fillRect(3, 6, width, height + 142);
       backing.fillStyle(PAPER).fillRect(0, 0, width, height + 142);

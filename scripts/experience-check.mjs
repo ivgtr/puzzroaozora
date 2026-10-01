@@ -11,7 +11,7 @@ const action=async id=>page.locator(`[data-action="${id}"]`).evaluate(node=>node
 const pieces=async()=>page.locator('[data-piece]').evaluateAll(nodes=>nodes.map(node=>({id:node.dataset.piece,text:node.textContent,selected:node.getAttribute('aria-pressed')})));
 const pick=async text=>{const found=(await pieces()).find(p=>p.text===text);assert(found,`Missing piece ${text}`);await page.locator(`[data-piece="${found.id}"]`).evaluate(node=>node.click());return found.id;};
 const join=async(left,right)=>{const id=(await pieces()).find(p=>p.text===left)?.id;assert(id);await pick(right);await action(`join:after:${id}`);};
-const shot=async name=>{await page.waitForTimeout(250);await page.screenshot({path:`/tmp/evidence/${name}.png`});};
+const shot=async name=>{await page.waitForTimeout(600);await page.screenshot({path:`/tmp/evidence/${name}.png`});};
 const noAnswer=async()=>{assert.equal(await page.locator('[data-original]').count(),0);assert.equal(await page.locator('[data-action="source"]').count(),0);assert.equal(await page.locator('[data-action="review"]').count(),0);};
 const open=async index=>{await action(`scene-${index}`);await action(`open-${passages[index].id}`);await mode('assembling');};
 try {
@@ -50,6 +50,12 @@ try {
   await action('settings');await action('motion');await action('close');await action('library');await action('close');await mode('assembling');await action('library');await action('confirm');await mode('selection');
   checks.push(`${passage.sceneTitle}: no pre-clear source, same partial feedback, all seams splittable, incorrect whole check preserves arrangement/history, exact original clear, undo/recheck/replay`);
  }
+ // Exercise the read-only legacy path with both old and imported-v2 records.
+ const saved=[{id:'legacy-proof',title:'以前の原稿',author:'保存者',addedAt:'2025-01-01',passages:[{encrypted:'keep-me'}]},{id:'import-proof',title:'取り込んだ原稿',author:'保存者',addedAt:'2026-01-01',formatVersion:2,kanaType:'old',sourceUrl:passages[0].sourceUrl,passages:[{...passages[0],curatedVersion:undefined}]}];
+ await page.evaluate(records=>new Promise((resolve,reject)=>{const req=indexedDB.open('aozora-puzzle',1);req.onsuccess=()=>{const db=req.result,tx=db.transaction('books','readwrite');for(const record of records)tx.objectStore('books').put(record);tx.oncomplete=()=>{db.close();resolve();};tx.onerror=reject;};req.onerror=reject;}),saved);
+ await page.reload();await mode('selection');await page.locator('[data-action="books"]').waitFor({state:'attached'});await action('books');await mode('books');assert.match(await page.locator('[data-description]').innerText(),/保存データはそのまま/);assert.equal(await page.locator('[data-action^="reimport-"]').count(),0);await shot('legacy-saved');await action('close');await open(0);await action('library');await action('confirm');
+ const retained=await page.evaluate(()=>new Promise((resolve,reject)=>{const req=indexedDB.open('aozora-puzzle',1);req.onsuccess=()=>{const db=req.result,tx=db.transaction('books','readonly'),read=tx.objectStore('books').getAll();tx.oncomplete=()=>{db.close();resolve(read.result);};tx.onerror=reject;};req.onerror=reject;}));
+ assert.deepEqual(JSON.parse(JSON.stringify(retained)).sort((a,b)=>a.id.localeCompare(b.id)),JSON.parse(JSON.stringify(saved)).sort((a,b)=>a.id.localeCompare(b.id)));checks.push('Legacy and v2 saved records remain byte-equivalent as JSON; no reimport/play route');
  await desktop.close();
  const mobile=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true});page=await mobile.newPage();page.on('pageerror',e=>errors.push(e.stack));
  await page.goto('http://127.0.0.1:5678');await mode('selection');await shot('mobile-selection');await page.touchscreen.tap(210,400);await mode('assembling');await shot('mobile-desk');
