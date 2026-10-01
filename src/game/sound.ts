@@ -4,7 +4,7 @@ import type { JoinEvent } from "./model.ts";
 type Cue = JoinEvent | "lift" | "land";
 const notes: Partial<Record<Cue, number[]>> = {
   lift: [0], land: [0], tentative: [0], split: [0], undo: [0],
-  new: [523, 659], extend: [659], bridge: [523, 659, 784], complete: [523, 659, 784, 1047],
+  complete: [523, 659, 784, 1047],
 };
 
 // Small original PCM cues, owned by Phaser's existing sound manager. No second

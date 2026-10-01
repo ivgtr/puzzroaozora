@@ -3,23 +3,36 @@ import assert from "node:assert/strict";
 import { PASSAGES } from "../src/data/passages.ts";
 import { comparisonText, extractPassages, graphemes, type Difficulty } from "../src/game/text.ts";
 import { makeProblem } from "../src/game/model.ts";
-import { CELL, PAD, layoutManuscript } from "../src/game/layout.ts";
+import { dealManuscript, CELL, PAD, layoutManuscript } from "../src/game/layout.ts";
 import { cleanAozora } from "../src/lib/aozora.ts";
 import { parseImportUrl } from "../src/lib/books.ts";
 
-test("ten distinct sourced manuscripts preserve every original character and phrase boundary", () => {
-  assert.equal(PASSAGES.length, 10);
-  assert.equal(new Set(PASSAGES.map((passage) => passage.original)).size, 10);
+test("fifteen curated scenes preserve source text and provide atmosphere plus reasoning hints", () => {
+  assert.equal(PASSAGES.length, 15);
+  assert.equal(new Set(PASSAGES.map((passage) => passage.original)).size, 15);
   assert.equal(new Set(PASSAGES.map((passage) => passage.workId)).size, 3);
   for (const passage of PASSAGES) {
     assert.equal(passage.fragments.join(""), comparisonText(passage.original));
     assert.ok(passage.sourceUrl.startsWith("https://www.aozora.gr.jp/cards/"));
     assert.ok(passage.location && passage.note);
-    assert.ok(passage.fragments.length >= 10 && passage.fragments.length <= 30);
+    assert.equal(passage.curatedVersion, 1);
+    assert.equal(passage.sceneTitle, passage.title, "selection uses the original work title");
+    assert.ok(passage.sceneTitle && passage.premise);
+    assert.ok(passage.hints.length >= 2 && passage.hints.length <= 3);
+    assert.ok(passage.hints.every((hint) => hint.trim().length > 0));
+    assert.ok(passage.fragments.length >= 8 && passage.fragments.length <= 12);
     assert.ok(passage.fragments.every((fragment) => graphemes(fragment).length >= 3));
     for (const difficulty of ["easy", "normal", "hard"] as Difficulty[]) assert.doesNotThrow(() => makeProblem(passage, difficulty));
     console.log(`${passage.id}: ${graphemes(comparisonText(passage.original)).length} characters, ${passage.fragments.length} pieces (${passage.difficulty})`);
   }
+});
+
+test("lemon's reason and contrast stay together instead of forming independently rotatable sentence groups", () => {
+  const passage = PASSAGES.find((scene) => scene.id === "lemon-shop-v3")!;
+  assert.equal(passage.fragments.length, 8);
+  // Splitting here allowed the shop's prior history to precede that day's purchase.
+  assert.ok(passage.fragments.some((fragment) => fragment.includes("出ていたのだ。檸檬などごくありふれている。がその店というのも")));
+  assert.ok(passage.fragments.includes("珍しい檸檬が"));
 });
 
 test("graphemes, source line breaks, half-width Latin, and square grid stay separate", () => {
@@ -50,4 +63,19 @@ test("import validates its source and refuses unknown characters instead of repl
   assert.throws(() => parseImportUrl("https://www.aozora.gr.jp.evil.example/cards/000148/card789.html"));
   assert.equal(cleanAozora("｜漢字《かんじ》\n※［＃U+20BB7］。"), "漢字\n𠮷。");
   assert.throws(() => cleanAozora("未解決※［＃外字］。"));
+});
+
+
+test("dealing uses paper widths without overlap or sideways overflow", () => {
+  const texts = PASSAGES[0].fragments;
+  for (const width of [320, 390, 1280]) {
+    const columns = Math.max(8, Math.min(16, Math.floor((width - 88) / CELL)));
+    const positions = dealManuscript(texts, columns, width);
+    const boxes = texts.map((text, index) => ({ ...positions[index], ...layoutManuscript(text, columns) }));
+    assert.equal(positions.length, texts.length);
+    boxes.forEach((box, index) => {
+      assert.ok(box.x >= 28 && box.x + box.width <= width - 28);
+      for (const other of boxes.slice(index + 1)) assert.ok(box.x + box.width <= other.x || other.x + other.width <= box.x || box.y + box.height <= other.y || other.y + other.height <= box.y);
+    });
+  }
 });
