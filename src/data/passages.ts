@@ -7,9 +7,9 @@ const works = {
   galaxy: { workId: "000456", title: "銀河鉄道の夜", author: "宮沢賢治", sourceUrl: "https://www.aozora.gr.jp/cards/000081/files/456_15050.html" },
 };
 
-function scene(id: string, work: keyof typeof works, sceneTitle: string, premise: string, marked: string, location: string, hints: readonly string[], note: string): CuratedPassage {
+function scene(id: string, work: keyof typeof works, premise: string, marked: string, location: string, hints: readonly string[], note: string): CuratedPassage {
   const original = marked.replaceAll("|", "");
-  return { id, ...works[work], curatedVersion: 1, difficulty: "easy", sceneTitle, premise, original, fragments: comparisonText(marked).split("|"), location, hints, note };
+  return { id, ...works[work], curatedVersion: 1, difficulty: "easy", sceneTitle: works[work].title, premise, original, fragments: comparisonText(marked).split("|"), location, hints, note };
 }
 
 // Reviewed against the linked Aozora originals on 2026-10-01. These are three
@@ -19,7 +19,7 @@ function scene(id: string, work: keyof typeof works, sceneTitle: string, premise
 // Source/location/original/editorial notes are for the completion view only.
 export const PASSAGES: CuratedPassage[] = [
   scene(
-    "cat-palm-v3", "cat", "ゆれる世界",
+    "cat-palm-v3", "cat",
     "小さな目に映る、まだよくわからない人間の世界。",
     "この書生の掌の裏でしばらくは|よい心持に坐っておったが、|しばらくすると非常な速力で|運転し始めた。書生が動くのか自分だけが動くのか|分らないが無暗に眼が廻る。胸が悪くなる。|到底助からないと思っていると、どさりと音がして|眼から火が出た。それまでは記憶しているが|あとは何の事やらいくら考え出そうとしても分らない。",
     "一・『この書生の掌の裏で』の段落",
@@ -31,7 +31,7 @@ export const PASSAGES: CuratedPassage[] = [
     "動く主体の二つの可能性と、二つの身体症状はそれぞれ一片に保持。衝撃と記憶の境も一片に含め、独立した文の入れ替えを減らした。",
   ),
   scene(
-    "lemon-shop-v3", "lemon", "店先の一景",
+    "lemon-shop-v3", "lemon",
     "見慣れた街角にも、ふと心を引くものがある。",
     "その日私はいつになく|その店で買物をした。|というのはその店には|珍しい檸檬が|出ていたのだ。檸檬などごくありふれている。がその店というのも|見すぼらしくはないまでも|ただあたりまえの八百屋に過ぎなかったので、|それまであまり見かけたことはなかった。",
     "『その日私はいつになく』〜『それまであまり見かけたことはなかった。』",
@@ -43,7 +43,7 @@ export const PASSAGES: CuratedPassage[] = [
     "檸檬が店に出ていた説明から『ありふれている』という対比、店へ話題を戻す部分までを一片に保持。店の説明を先に読んでからその日の買物へ戻せる、独立した二群への分離を避けた。",
   ),
   scene(
-    "galaxy-wages-v3", "galaxy", "夕方の足音",
+    "galaxy-wages-v3", "galaxy",
     "仕事場と通りに残る、夕方のざわめき。",
     "ジョバンニはおじぎをすると扉をあけて|さっきの計算台のところに来ました。すると|さっきの白服を着た人がやっぱりだまって|小さな銀貨を一つジョバンニに渡しました。|ジョバンニは俄かに顔いろがよくなって|威勢よくおじぎをすると台の下に置いた|鞄をもっておもてへ飛びだしました。|それから元気よく口笛を吹きながら|パン屋へ寄ってパンの塊を一つと|角砂糖を一袋買いますと一目散に走りだしました。",
     "二・活版所『ジョバンニはおじぎをすると扉をあけて』の段落",

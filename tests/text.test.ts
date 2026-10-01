@@ -16,6 +16,7 @@ test("three curated scenes preserve source text and provide atmosphere plus reas
     assert.ok(passage.sourceUrl.startsWith("https://www.aozora.gr.jp/cards/"));
     assert.ok(passage.location && passage.note);
     assert.equal(passage.curatedVersion, 1);
+    assert.equal(passage.sceneTitle, passage.title, "selection uses the original work title");
     assert.ok(passage.sceneTitle && passage.premise);
     assert.ok(passage.hints.length >= 2 && passage.hints.length <= 3);
     assert.ok(passage.hints.every((hint) => hint.trim().length > 0));

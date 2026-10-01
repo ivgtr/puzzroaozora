@@ -9,7 +9,7 @@ import { Paper, PAPER, MAT } from "./paper.ts";
 import { playCue, prepareSounds } from "./sound.ts";
 import type { DeskSnapshot, HostBridge } from "./bridge.ts";
 
-export const UI_TEXT = `紙片をひろげる つなぎ方 読了 枚の紙片 ↗ 青空の修復机 三つの情景 紙片から、一節をつなぐ。 つなぐ 手掛かり 読み通す 別の情景 同じ情景 もう一度 つながりを見直す 原文 出典を読む 全体 戻す 操作 音と動き 設定 閉じる 以前の保存 保存した本 作品の取り込みは休止しています。保存データはそのまま残っています。新しいルールでは、手で選び直した三つの情景で遊べます。 この情景を離れますか 途中の配置は保存されません。 続ける 選び直す 一枚の原稿になりました。 紙片を選び、相手の端へ 余白を動かすと、ほかの紙片が見つかります 左端が前、右端が後。選んだ紙片をつなぎます。 切れ目をタップして、いつでも外せます。 つながりを作りました。 つながりを外しました。 一つ前の操作に戻しました。 原文とは、まだ少し違うようです。切れ目を外して読み直してみましょう。 ひとつにつながりました。読み通して確かめましょう。 音量 小 大 音なし 動きを控える 有効 無効 このブラウザでは音を利用できません。 紙片をドラッグして、相手の端へ。 紙片を選んでから相手の端をタップしてもつながります。 正誤は最後に読み通すまで分かりません。 選んだ紙片の切れ目をタップすると外せます。 余白をドラッグして移動。二本指・ホイールで拡大縮小。 矢印で移動、Enterで選択、[ と ]で前後へ。 Deleteで分離、Zで戻す、Hで手引き、Escで取消。 次の手掛かり 前へ 次へ 準備中です。 読み込めませんでした。 読み込みを完了できませんでした。 段落の順序を確かめる 紙片 残り 組 つながり 確認 正解の場所は示しません まだ保存した本はありません。 記録 この三問は手作業で選んだ抜粋です。 答えは、つなぎ終えたあとに。 選択した紙片を前につなぐ 選択した紙片を後につなぐ 番目の切れ目を外す 01 02 03 / · ← → ＋ − × … ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789[]()%「」、。`;
+export const UI_TEXT = `作品を選ぶ 作品選択に戻る パズルを続ける パズルを始める すべての紙片を表示 原稿全体を表示 音量を下げる 音量を上げる 消音を解除 消音にする 紙片をひろげる 遊び方 読了 枚の紙片 ↗ 青空パズル つなぐ 手掛かり 読み通す 別の情景 同じ情景 もう一度 つながりを見直す 原文 出典を読む 全体表示 元に戻す 遊び方 設定 閉じる 保存した本 作品の取り込みは休止しています。保存データはそのまま残っています。新しいルールでは、手で選び直した3作品の抜粋で遊べます。 作品選択に戻りますか 途中の配置は保存されません。 続ける 選び直す 一枚の原稿になりました。 紙片を選び、相手の端へ 余白を動かすと、ほかの紙片が見つかります 左端が前、右端が後。選んだ紙片をつなぎます。 切れ目をタップして、いつでも外せます。 つながりを作りました。 つながりを外しました。 一つ前の操作に戻しました。 原文とは、まだ少し違うようです。切れ目を外して読み直してみましょう。 ひとつにつながりました。読み通して確かめましょう。 音量 小 大 音なし 動きを控える 有効 無効 このブラウザでは音を利用できません。 紙片をドラッグして、相手の端へ。 紙片を選んでから相手の端をタップしてもつながります。 正誤は最後に読み通すまで分かりません。 選んだ紙片の切れ目をタップすると外せます。 余白をドラッグして移動。二本指・ホイールで拡大縮小。 矢印で移動、Enterで選択、[ と ]で前後へ。 Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。 次の手掛かり 前へ 次へ 準備中です。 読み込めませんでした。 読み込みを完了できませんでした。 段落の順序を確かめる 紙片 残り 組 つながり 確認 正解の場所は示しません まだ保存した本はありません。 記録 この三問は手作業で選んだ抜粋です。 答えは、つなぎ終えたあとに。 選択した紙片を前につなぐ 選択した紙片を後につなぐ 番目の切れ目を外す 01 02 03 / · ← → ＋ − × … ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789[]()%「」、。`;
 
 type Overlay = "settings" | "leave" | "books" | "help" | "hint";
 type View = { paper: Paper; signature: string };
@@ -78,7 +78,7 @@ export class DeskScene extends Phaser.Scene {
     this.scale.on("resize", this.resize, this);
     this.game.events.on(Phaser.Core.Events.BLUR, this.cancelGesture, this);
     this.game.canvas.tabIndex = 0;
-    this.game.canvas.setAttribute("aria-label", "青空の修復机。操作の手引きはHキー。Tabキーで同じ操作の読み上げ用ボタンへ移動します。");
+    this.game.canvas.setAttribute("aria-label", "青空パズル。遊び方はHキー。Tabキーで同じ操作の読み上げ用ボタンへ移動します。");
     this.game.canvas.addEventListener("keydown", this.onKey);
     this.game.canvas.addEventListener("pointercancel", this.cancelGesture);
     this.game.canvas.addEventListener("touchcancel", this.cancelGesture);
@@ -208,15 +208,15 @@ export class DeskScene extends Phaser.Scene {
     // The same unbounded working surface holds the invitation and the puzzle.
     ground.lineStyle(1, 0x8f9c8d, .16).lineBetween(28, 44, this.w - 28, 44);
     this.hud.add(ground);
-    this.label("青空の修復机", 28, 20, 12, 0, "#637267");
-    this.button("settings", "音と動き", this.w - 118, 10, 90, 44, () => this.openOverlay("settings"));
+    this.label("青空パズル", 28, 16, 16, 0, "#637267");
+    this.button("settings", "設定", this.w - 118, 10, 90, 44, () => this.openOverlay("settings"));
     this.panel(x, y, width, height);
     const margin = compact ? 28 : 40;
     this.label(`0${this.libraryPage + 1}  /  03`, x + margin, y + 28, 11, 0, "#8b7463");
-    this.label("三つの情景", x + width - margin - 70, y + 28, 11, 0, "#8b7463");
+    this.label("作品を選ぶ", x + width - margin - 70, y + 28, 11, 0, "#8b7463");
     const titleY = y + (short ? 65 : compact ? 80 : 62);
-    this.fitLabel(passage.sceneTitle, x + margin - 2, titleY, compact ? 32 : 44, width - margin * 2, "#33483e", 2);
-    this.label(`${passage.title}  ·  ${passage.author}`, x + margin, titleY + (compact ? 55 : 64), compact ? 11 : 12, width - margin * 2, "#727668");
+    this.fitLabel(passage.title, x + margin - 2, titleY, this.w < 380 ? 30 : compact ? 32 : 44, width - margin * 2, "#33483e", 2);
+    this.label(passage.author, x + margin, titleY + (compact ? 55 : 64), compact ? 11 : 12, width - margin * 2, "#727668");
     if (!short) this.label(passage.premise, x + margin, y + (compact ? 186 : 166), 13, width - margin * 2, "#626e61", true);
     const rule = this.add.graphics().lineStyle(1, 0xaa6652, .42).lineBetween(x + margin, y + height - 65, x + width - margin, y + height - 65);
     this.hud.add(rule);
@@ -224,7 +224,7 @@ export class DeskScene extends Phaser.Scene {
     this.label("紙片をひろげる →", x + width - margin - 133, y + height - 42, 13, 0, "#354c42");
     const id = `open-${passage.id}`;
     const bounds = new Phaser.Geom.Rectangle(x, y, width, height);
-    this.actions.set(id, { label: `${passage.sceneTitle}（${passage.title}）の紙片をひろげる`, invoke: () => { void this.openPassage(passage); }, bounds });
+    this.actions.set(id, { label: `『${passage.title}』のパズルを始める`, invoke: () => { void this.openPassage(passage); }, bounds });
     const sheet = this.add.zone(x, y, width, height).setOrigin(0).setInteractive();
     let armed = false;
     sheet.on("pointerover", () => { this.game.canvas.style.cursor = "pointer"; });
@@ -233,16 +233,21 @@ export class DeskScene extends Phaser.Scene {
     sheet.on("pointerup", () => { if (armed) { armed = false; this.dispatch(id); } });
     this.hud.add(sheet);
     const navY = y + height + 16;
-    const navWidth = Math.min(120, (this.w - 40) / 3);
-    const navX = (this.w - navWidth * 3) / 2;
+    const navWidth = Math.min(390, this.w - 40);
+    const titleWidths = PASSAGES.map((item) => graphemes(item.title).length + 2);
+    const totalWidth = titleWidths.reduce((sum, value) => sum + value, 0);
+    let navX = (this.w - navWidth) / 2;
     PASSAGES.forEach((item, index) => {
-      this.button(`scene-${index}`, this.w < 380 ? item.sceneTitle : `0${index + 1}  ${item.sceneTitle}`, navX + index * navWidth, navY, navWidth, 44, () => { this.libraryPage = index; this.notice = ""; this.render(); });
+      const itemWidth = navWidth * titleWidths[index] / totalWidth;
+      this.button(`scene-${index}`, item.title, navX, navY, itemWidth, 44, () => { this.libraryPage = index; this.notice = ""; this.render(); });
+      this.actions.get(`scene-${index}`)!.label = `『${item.title}』を選ぶ`;
       if (index === this.libraryPage) {
-        const mark = this.add.graphics().fillStyle(0xa05c47).fillCircle(navX + index * navWidth + navWidth / 2, navY + 45, 2);
+        const mark = this.add.graphics().fillStyle(0xa05c47).fillCircle(navX + itemWidth / 2, navY + 45, 2);
         this.hud.add(mark);
       }
+      navX += itemWidth;
     });
-    if (this.saved.length) this.button("books", "以前の保存", 14, this.h - 46, 104, 44, () => this.openOverlay("books"));
+    if (this.saved.length) this.button("books", "保存した本", 14, this.h - 46, 104, 44, () => this.openOverlay("books"));
     if (this.notice) this.label(this.notice, 28, this.h - 30, 12, this.w - 56, "#735746");
   }
 
@@ -253,21 +258,21 @@ export class DeskScene extends Phaser.Scene {
     const background = this.add.graphics().fillStyle(MAT).fillRect(0, 0, this.w, this.top).fillRect(0, this.h - 112, this.w, 112);
     this.hud.add(background);
     this.button("library", "←", 12, 14, 44, 44, () => this.assembling ? this.openOverlay("leave") : this.leave());
-    this.actions.get("library")!.label = "別の情景を選ぶ";
-    this.fitLabel(problem.sceneTitle, 68, 17, compact ? 20 : 24, this.w - 208, "#354b40");
-    this.label(`${problem.title} · ${problem.author}`, 70, 49, 10, this.w - 166, "#768074");
-    this.button("overview", "全体", this.w - 112, 16, 52, 44, () => this.overview());
-    this.button("settings", "…", this.w - 60, 16, 44, 44, () => this.openOverlay("settings"));
-    this.actions.get("settings")!.label = "音と動きの設定";
+    this.actions.get("library")!.label = "作品選択に戻る";
+    this.fitLabel("青空パズル", 68, 17, compact ? 18 : 24, this.w - 216, "#354b40");
+    this.label(`${problem.title} · ${problem.author}`, 70, 55, 10, this.w - 84, "#768074");
+    this.button("overview", "全体表示", this.w - 142, 8, 78, 44, () => this.overview());
+    this.button("settings", "設定", this.w - 60, 8, 44, 44, () => this.openOverlay("settings"));
+    this.actions.get("overview")!.label = complete ? "原稿全体を表示" : "すべての紙片を表示";
     const y = this.h - 61;
-    if (session.canUndo) this.button("undo", "戻す", 14, y, 78, 44, () => this.apply({ type: "undo" }));
+    if (session.canUndo) this.button("undo", "元に戻す", 14, y, 78, 44, () => this.apply({ type: "undo" }));
     if (complete) {
       this.button("source", "出典を読む ↗", this.w / 2 - Math.min(152, this.w - 216) / 2, y, Math.min(152, this.w - 216), 44, () => window.open(problem.sourceUrl, "_blank", "noopener,noreferrer"), true);
       this.button("again", "もう一度", this.w - 104, y, 90, 44, () => { if (this.currentPassage) void this.openPassage(this.currentPassage); });
     } else {
       this.fitLabel(this.notice || (session.canCheck ? "ひとつにつながりました。読み通して確かめましょう。" : this.selected ? "左端が前、右端が後。選んだ紙片をつなぎます。" : "紙片を選び、相手の端へ。余白を動かすと、ほかの紙片が見つかります"), 24, this.h - 108, 12, this.w - 48, "#647465", 2, false);
       if (session.canCheck) this.button("check", "読み通す →", this.w / 2 - Math.min(152, this.w - 216) / 2, y, Math.min(152, this.w - 216), 44, () => this.apply({ type: "check" }), true);
-      else this.button("help", "操作", this.w / 2 - 30, y, 60, 44, () => this.openOverlay("help"));
+      else this.button("help", "遊び方", this.w / 2 - 39, y, 78, 44, () => this.openOverlay("help"));
       this.button("hint", "手掛かり", this.w - 104, y, 90, 44, () => this.openOverlay("hint"));
     }
   }
@@ -281,20 +286,25 @@ export class DeskScene extends Phaser.Scene {
     this.panel(x, y, width, height);
     const bottom = y + height - 64;
     if (this.overlay === "settings") {
-      this.label("音と動き", x + 28, y + 28, 25, 0, "#354b40", true);
+      this.label("設定", x + 28, y + 28, 25, 0, "#354b40", true);
       this.label(this.hasAudio ? `音量 ${Math.round(this.volume * 100)}%` : "このブラウザでは音を利用できません。", x + 28, y + 90, 14, width - 56);
       this.button("quieter", "−", x + 28, y + 125, 48, 44, () => { this.volume = Math.max(0, this.volume - .1); this.render(); });
       this.button("louder", "＋", x + 84, y + 125, 48, 44, () => { this.volume = Math.min(1, this.volume + .1); playCue(this, "land", this.volume); this.render(); });
       this.button("mute", "音なし", x + 152, y + 125, 86, 44, () => { this.volume = this.volume ? 0 : .7; this.render(); }, this.volume === 0);
+      this.actions.get("quieter")!.label = "音量を下げる";
+      this.actions.get("louder")!.label = "音量を上げる";
+      this.actions.get("mute")!.label = this.volume === 0 ? "消音を解除" : "消音にする";
       this.button("motion", `動きを控える：${this.reduced ? "有効" : "無効"}`, x + 20, y + 190, width - 40, 44, () => { this.reduced = !this.reduced; this.render(); });
     } else if (this.overlay === "books") {
-      this.label("以前の保存", x + 28, y + 28, 25, 0, "#354b40", true);
-      this.label("作品の取り込みは休止しています。保存データはそのまま残っています。新しいルールでは、手で選び直した三つの情景で遊べます。", x + 28, y + 82, 14, width - 56);
+      this.label("保存した本", x + 28, y + 28, 25, 0, "#354b40", true);
+      this.label("作品の取り込みは休止しています。保存データはそのまま残っています。新しいルールでは、手で選び直した3作品の抜粋で遊べます。", x + 28, y + 82, 14, width - 56);
       const book = this.saved[this.reviewPage];
       if (book) {
         this.fitLabel(`${book.title} · ${book.author}`, x + 28, y + 208, 16, width - 56, "#354b40", 2);
         this.button("books-prev", "←", x + 24, bottom, 44, 44, () => { this.reviewPage = Math.max(0, this.reviewPage - 1); this.render(); });
         this.button("books-next", "→", x + 72, bottom, 44, 44, () => { this.reviewPage = Math.min(this.saved.length - 1, this.reviewPage + 1); this.render(); });
+        this.actions.get("books-prev")!.label = "前の保存した本";
+        this.actions.get("books-next")!.label = "次の保存した本";
       }
     } else if (this.overlay === "hint") {
       this.label("手掛かり", x + 28, y + 28, 25, 0, "#354b40", true);
@@ -306,7 +316,7 @@ export class DeskScene extends Phaser.Scene {
       if (this.actions.has("hint-prev")) this.actions.get("hint-prev")!.label = "前の手掛かり";
       if (this.actions.has("hint-next")) this.actions.get("hint-next")!.label = "次の手掛かり";
     } else if (this.overlay === "help") {
-      this.label("つなぎ方", x + 28, y + 28, 25, 0, "#354b40", true);
+      this.label("遊び方", x + 28, y + 28, 25, 0, "#354b40", true);
       this.label(`紙片をドラッグして、相手の端へ。
 紙片を選んでから相手の端をタップしてもつながります。
 
@@ -314,18 +324,18 @@ export class DeskScene extends Phaser.Scene {
 
 余白をドラッグして移動。二本指・ホイールで拡大縮小。`, x + 28, y + 80, 14, width - 56);
       if (height >= 460) this.label(`矢印で移動、Enterで選択、[ と ]で前後へ。
-Deleteで分離、Zで戻す、Hで手引き、Escで取消。`, x + 28, bottom - 72, 11, width - 56, "#727668");
+Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。`, x + 28, bottom - 72, 11, width - 56, "#727668");
     } else {
-      this.label("この情景を離れますか", x + 28, y + 34, 23, width - 56, "#354b40", true);
+      this.label("作品選択に戻りますか", x + 28, y + 34, 23, width - 56, "#354b40", true);
       this.label("途中の配置は保存されません。", x + 28, y + 106, 14, width - 56);
-      this.button("confirm", "選び直す", x + 24, bottom, 134, 44, () => this.leave());
+      this.button("confirm", "作品選択に戻る", x + 24, bottom, 134, 44, () => this.leave());
     }
-    this.button("close", this.overlay === "leave" ? "続ける" : "閉じる", x + width - 126, bottom, 102, 44, () => this.closeOverlay(), true);
+    this.button("close", this.overlay === "leave" ? "パズルを続ける" : "閉じる", x + width - 126, bottom, 102, 44, () => this.closeOverlay(), true);
   }
 
   private publish(): void {
     const actions = [...this.actions].map(([id, action]) => ({ id, label: action.label }));
-    const snapshot: DeskSnapshot = { mode: this.overlay ?? this.session?.state.phase ?? "selection", title: this.session?.problem.sceneTitle ?? "青空の修復机", status: this.notice, actions, pieces: [] };
+    const snapshot: DeskSnapshot = { mode: this.overlay ?? this.session?.state.phase ?? "selection", title: this.session ? `青空パズル · ${this.session.problem.title}` : "青空パズル", status: this.notice, actions, pieces: [] };
     if (this.session && !this.overlay) {
       if (this.session.state.phase === "complete") snapshot.original = this.session.problem.original;
       else if (this.assembling) {
@@ -337,7 +347,7 @@ Deleteで分離、Zで戻す、Hで手引き、Escで取消。`, x + 28, bottom 
       }
     }
     if (this.overlay === "hint") snapshot.description = this.session!.problem.hints[this.hintIndex];
-    if (this.overlay === "help") snapshot.description = "紙片をドラッグして相手の端へ。選んでから相手の端をタップしてもつながります。選んだ紙片の切れ目をタップすると外せます。正誤は最後に読み通すまで分かりません。余白をドラッグして移動。二本指・ホイールで拡大縮小。矢印で移動、Enterで選択、[ と ]で前後へ。Deleteで分離、Zで戻す、Hで手引き、Escで取消。";
+    if (this.overlay === "help") snapshot.description = "紙片をドラッグして相手の端へ。選んでから相手の端をタップしてもつながります。選んだ紙片の切れ目をタップすると外せます。正誤は最後に読み通すまで分かりません。余白をドラッグして移動。二本指・ホイールで拡大縮小。矢印で移動、Enterで選択、[ と ]で前後へ。Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。";
     if (this.overlay === "books") snapshot.description = "作品の取り込みは休止しています。保存データはそのまま残っています。" + this.saved.map((book) => `${book.title}・${book.author}`).join("。 ");
     if (this.overlay === "leave") snapshot.description = "途中の配置は保存されません。";
     this.bridge.publish(snapshot);
