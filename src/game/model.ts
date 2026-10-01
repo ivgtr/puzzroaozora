@@ -15,6 +15,7 @@ export interface Point { x: number; y: number }
 export interface Chain extends Point { readonly id: string; readonly tiles: readonly string[]; readonly bonds: readonly boolean[] }
 export interface DeskState { readonly phase: "reading" | "assembling" | "complete"; readonly chains: readonly Chain[] }
 export type JoinEvent = "none" | "move" | "split" | "tentative" | "incorrect" | "complete" | "undo";
+export type HintResult = { readonly kind: "revealed"; readonly anchorId: string; readonly targetId: string; readonly repeated: boolean } | { readonly kind: "unavailable" | "exhausted" };
 export type Command = { type: "join"; source: string; target: string; side: "before" | "after" } | { type: "split"; chain: string; boundary: number } | { type: "move"; chain: string; point: Point } | { type: "check" } | { type: "undo" };
 
 function hasCuration(passage: Passage | Problem): passage is CuratedPassage | Problem {
@@ -73,11 +74,58 @@ export function canReconstruct(original: string, blocks: readonly string[]): boo
   return visit(0);
 }
 
+// Resolve only edges shared by every full reconstruction. Tile IDs carry no
+// source position; repeated text and ambiguous chunk boundaries must never lead
+// to an arbitrary "correct" tile. At most 12 pieces keep this subset search small.
+// This answer lookup is called only by an explicit hint, never by a join.
+function unambiguousSuccessors(original: string, tiles: readonly Tile[]): Map<string, string> {
+  const allUsed = (1 << tiles.length) - 1;
+  const choices = new Map<number, number[]>();
+  function next(used: number, offset: number): number[] {
+    const cached = choices.get(used);
+    if (cached) return cached;
+    const possible: number[] = [];
+    for (let i = 0; i < tiles.length; i++) {
+      if ((used & (1 << i)) || !original.startsWith(tiles[i].text, offset)) continue;
+      const nextUsed = used | (1 << i);
+      const nextOffset = offset + tiles[i].text.length;
+      if (nextUsed === allUsed ? nextOffset === original.length : next(nextUsed, nextOffset).length > 0) possible.push(i);
+    }
+    // The used subset determines the offset, even when prefixes are ambiguous.
+    choices.set(used, possible);
+    return possible;
+  }
+  const successors = tiles.map(() => new Set<number>());
+  const visited = new Set<number>();
+  function collect(used: number, offset: number): void {
+    if (visited.has(used)) return;
+    visited.add(used);
+    for (const i of next(used, offset)) {
+      const nextUsed = used | (1 << i);
+      const nextOffset = offset + tiles[i].text.length;
+      if (nextUsed === allUsed) successors[i].add(-1);
+      else {
+        for (const successor of next(nextUsed, nextOffset)) successors[i].add(successor);
+        collect(nextUsed, nextOffset);
+      }
+    }
+  }
+  collect(0, 0);
+  const result = new Map<string, string>();
+  successors.forEach((candidates, i) => {
+    const [successor] = candidates;
+    if (candidates.size === 1 && successor >= 0) result.set(tiles[i].id, tiles[successor].id);
+  });
+  return result;
+}
+
 export class Session {
   readonly problem: Problem;
   private readonly tileText: Map<string, string>;
   private current: DeskState = { phase: "reading", chains: [] };
   private history: DeskState[] = [];
+  private hintTargets?: ReadonlyMap<string, string>;
+  private readonly revealedHints = new Map<string, string>();
 
   constructor(problem: Problem) {
     this.problem = problem;
@@ -87,7 +135,25 @@ export class Session {
   get state(): DeskState { return this.current; }
   get canUndo(): boolean { return this.history.length > 0; }
   get canCheck(): boolean { return this.current.phase === "assembling" && this.current.chains.length === 1; }
+  get hintsRemaining(): number { return 3 - this.revealedHints.size; }
   text(chain: Chain): string { return chain.tiles.map((id) => this.tileText.get(id)!).join(""); }
+
+  hintFor(chainId: string): HintResult {
+    if (this.current.phase !== "assembling") return { kind: "unavailable" };
+    const chain = this.current.chains.find((candidate) => candidate.id === chainId);
+    const anchorId = chain?.tiles.at(-1);
+    if (!anchorId) return { kind: "unavailable" };
+    const revealed = this.revealedHints.get(anchorId);
+    if (revealed) return { kind: "revealed", anchorId, targetId: revealed, repeated: true };
+    // Once spent, new requests reveal nothing about whether a successor exists.
+    if (this.hintsRemaining === 0) return { kind: "exhausted" };
+    this.hintTargets ??= unambiguousSuccessors(comparisonText(this.problem.original), this.problem.tiles);
+    const targetId = this.hintTargets.get(anchorId);
+    if (!targetId) return { kind: "unavailable" };
+    // Hint spending is session state, independent of arrangement and Undo.
+    this.revealedHints.set(anchorId, targetId);
+    return { kind: "revealed", anchorId, targetId, repeated: false };
+  }
 
   begin(positions: readonly Point[]): void {
     if (this.current.phase !== "reading" || positions.length !== this.problem.tiles.length || positions.some(({ x, y }) => !Number.isFinite(x) || !Number.isFinite(y))) throw new Error("開始状態が不正です。");

@@ -1,5 +1,7 @@
 import Phaser from "phaser";
 import { PASSAGES } from "../data/passages.ts";
+import { drawPassage } from "./questions.ts";
+
 import { readBooks, type LibraryBook } from "../lib/books.ts";
 import { Session, makeProblem, type Chain, type Command, type Point, type CuratedPassage } from "./model.ts";
 import { graphemes } from "./text.ts";
@@ -9,7 +11,9 @@ import { Paper, PAPER, MAT } from "./paper.ts";
 import { playCue, prepareSounds } from "./sound.ts";
 import type { DeskSnapshot, HostBridge } from "./bridge.ts";
 
-export const UI_TEXT = `作品を選ぶ 作品選択に戻る パズルを続ける パズルを始める すべての紙片を表示 原稿全体を表示 音量を下げる 音量を上げる 消音を解除 消音にする 紙片をひろげる 遊び方 読了 枚の紙片 ↗ 青空パズル つなぐ 手掛かり 読み通す 別の情景 同じ情景 もう一度 つながりを見直す 原文 出典を読む 全体表示 元に戻す 遊び方 設定 閉じる 保存した本 作品の取り込みは休止しています。保存データはそのまま残っています。新しいルールでは、手で選び直した3作品の抜粋で遊べます。 作品選択に戻りますか 途中の配置は保存されません。 続ける 選び直す 一枚の原稿になりました。 紙片を選び、相手の端へ 余白を動かすと、ほかの紙片が見つかります 左端が前、右端が後。選んだ紙片をつなぎます。 切れ目をタップして、いつでも外せます。 つながりを作りました。 つながりを外しました。 一つ前の操作に戻しました。 原文とは、まだ少し違うようです。切れ目を外して読み直してみましょう。 ひとつにつながりました。読み通して確かめましょう。 音量 小 大 音なし 動きを控える 有効 無効 このブラウザでは音を利用できません。 紙片をドラッグして、相手の端へ。 紙片を選んでから相手の端をタップしてもつながります。 正誤は最後に読み通すまで分かりません。 選んだ紙片の切れ目をタップすると外せます。 余白をドラッグして移動。二本指・ホイールで拡大縮小。 矢印で移動、Enterで選択、[ と ]で前後へ。 Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。 次の手掛かり 前へ 次へ 準備中です。 読み込めませんでした。 読み込みを完了できませんでした。 段落の順序を確かめる 紙片 残り 組 つながり 確認 正解の場所は示しません まだ保存した本はありません。 記録 この三問は手作業で選んだ抜粋です。 答えは、つなぎ終えたあとに。 選択した紙片を前につなぐ 選択した紙片を後につなぐ 番目の切れ目を外す 01 02 03 / · ← → ＋ − × … ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789[]()%「」、。`;
+const WORKS = PASSAGES.filter((passage, index) => PASSAGES.findIndex((other) => other.workId === passage.workId) === index);
+
+export const UI_TEXT = `ヒント 残り 回 取消 次の問題 ランダム出題 読む手掛かり 続きを知りたい紙片を選ぶ。塊は末尾が対象です。 色のついた部分が続きです。自動ではつなぎません。 前に見たヒントです。 続きを表示できません。別の紙片を選んでください。 残り0回です。前に見た紙片は再表示できます。 ヒントは一問3回。取消・再表示は減りません。 新しい問題を始めると3回に戻ります。 同じ作品の別の抜粋をランダムに出題します。 問からランダムに出題 ヒントで続きを表示した紙片だけ色がつきます。 作品を選ぶ 作品選択に戻る パズルを続ける パズルを始める すべての紙片を表示 原稿全体を表示 音量を下げる 音量を上げる 消音を解除 消音にする 紙片をひろげる 遊び方 読了 枚の紙片 ↗ 青空パズル つなぐ 手掛かり 読み通す 別の情景 同じ情景 もう一度 つながりを見直す 原文 出典を読む 全体表示 元に戻す 遊び方 設定 閉じる 保存した本 作品の取り込みは休止しています。保存データはそのまま残っています。新しいルールでは、手で選び直した3作品の抜粋で遊べます。 作品選択に戻りますか 途中の配置は保存されません。 続ける 選び直す 一枚の原稿になりました。 紙片を選び、相手の端へ 余白を動かすと、ほかの紙片が見つかります 左端が前、右端が後。選んだ紙片をつなぎます。 切れ目をタップして、いつでも外せます。 つながりを作りました。 つながりを外しました。 一つ前の操作に戻しました。 原文とは、まだ少し違うようです。切れ目を外して読み直してみましょう。 ひとつにつながりました。読み通して確かめましょう。 音量 小 大 音なし 動きを控える 有効 無効 このブラウザでは音を利用できません。 紙片をドラッグして、相手の端へ。 紙片を選んでから相手の端をタップしてもつながります。 正誤は最後に読み通すまで分かりません。 選んだ紙片の切れ目をタップすると外せます。 余白をドラッグして移動。二本指・ホイールで拡大縮小。 矢印で移動、Enterで選択、[ と ]で前後へ。 Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。 次の手掛かり 前へ 次へ 準備中です。 読み込めませんでした。 読み込みを完了できませんでした。 段落の順序を確かめる 紙片 残り 組 つながり 確認 正解の場所は示しません まだ保存した本はありません。 記録 この三問は手作業で選んだ抜粋です。 答えは、つなぎ終えたあとに。 選択した紙片を前につなぐ 選択した紙片を後につなぐ 番目の切れ目を外す 01 02 03 / · ← → ＋ − × … ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789[]()%「」、。`;
 
 type Overlay = "settings" | "leave" | "books" | "help" | "hint";
 type View = { paper: Paper; signature: string };
@@ -31,6 +35,10 @@ export class DeskScene extends Phaser.Scene {
   private manuscriptFrame?: Phaser.GameObjects.Container;
   private session?: Session;
   private currentPassage?: CuratedPassage;
+  private lastPassageByWork = new Map<string, string>();
+  private hintSelecting = false;
+  private hintTarget?: string;
+  private hintDescription = "";
   private selected?: string;
   private focused?: string;
   private gesture?: Gesture;
@@ -155,17 +163,19 @@ export class DeskScene extends Phaser.Scene {
     if (this.busy || !this.alive) return;
     if (id.startsWith("piece:")) {
       if (!this.assembling || this.overlay) return;
+      if (this.hintSelecting) { this.revealHint(id.slice(6)); return; }
+      this.hintTarget = undefined; this.hintDescription = ""; this.notice = "";
       this.selected = id.slice(6); this.focused = this.selected;
       this.syncSelection(); this.render(); return;
     }
     if (id.startsWith("join:")) {
       const [, side, target] = id.split(":");
-      if (this.selected && (side === "before" || side === "after") && !this.overlay) this.apply({ type: "join", source: this.selected, target, side });
+      if (this.selected && (side === "before" || side === "after") && !this.overlay && !this.hintSelecting) this.apply({ type: "join", source: this.selected, target, side });
       return;
     }
     if (id.startsWith("split:")) {
       const [, chain, boundary] = id.split(":");
-      if (!this.overlay) this.apply({ type: "split", chain, boundary: Number(boundary) });
+      if (!this.overlay && !this.hintSelecting) this.apply({ type: "split", chain, boundary: Number(boundary) });
       return;
     }
     this.actions.get(id)?.invoke();
@@ -200,7 +210,8 @@ export class DeskScene extends Phaser.Scene {
   private renderLibrary(): void {
     const compact = this.w < 700;
     const short = this.h < 580;
-    const passage = PASSAGES[this.libraryPage % PASSAGES.length];
+    const passage = WORKS[this.libraryPage % WORKS.length];
+    const count = PASSAGES.filter((item) => item.workId === passage.workId).length;
     const width = Math.min(600, this.w - 48);
     const height = Math.min(short ? 246 : compact ? 342 : 286, this.h - 132);
     const x = (this.w - width) / 2, y = Math.max(68, (this.h - height) / 2 - 14);
@@ -217,14 +228,14 @@ export class DeskScene extends Phaser.Scene {
     const titleY = y + (short ? 65 : compact ? 80 : 62);
     this.fitLabel(passage.title, x + margin - 2, titleY, this.w < 380 ? 30 : compact ? 32 : 44, width - margin * 2, "#33483e", 2);
     this.label(passage.author, x + margin, titleY + (compact ? 55 : 64), compact ? 11 : 12, width - margin * 2, "#727668");
-    if (!short) this.label(passage.premise, x + margin, y + (compact ? 186 : 166), 13, width - margin * 2, "#626e61", true);
+    if (!short) this.label("同じ作品の別の抜粋をランダムに出題します。", x + margin, y + (compact ? 186 : 166), 13, width - margin * 2, "#626e61", true);
     const rule = this.add.graphics().lineStyle(1, 0xaa6652, .42).lineBetween(x + margin, y + height - 65, x + width - margin, y + height - 65);
     this.hud.add(rule);
-    this.label(`${passage.fragments.length} 枚の紙片`, x + margin, y + height - 42, 12, 0, "#7d7b6c");
-    this.label("紙片をひろげる →", x + width - margin - 133, y + height - 42, 13, 0, "#354c42");
+    this.label(`${count}問・ランダム`, x + margin, y + height - 42, 12, 0, "#7d7b6c");
+    this.label("始める →", x + width - margin - 68, y + height - 42, 13, 0, "#354c42");
     const id = `open-${passage.id}`;
     const bounds = new Phaser.Geom.Rectangle(x, y, width, height);
-    this.actions.set(id, { label: `『${passage.title}』のパズルを始める`, invoke: () => { void this.openPassage(passage); }, bounds });
+    this.actions.set(id, { label: `『${passage.title}』の${count}問からランダムに始める`, invoke: () => { void this.openWork(passage.workId); }, bounds });
     const sheet = this.add.zone(x, y, width, height).setOrigin(0).setInteractive();
     let armed = false;
     sheet.on("pointerover", () => { this.game.canvas.style.cursor = "pointer"; });
@@ -234,10 +245,10 @@ export class DeskScene extends Phaser.Scene {
     this.hud.add(sheet);
     const navY = y + height + 16;
     const navWidth = Math.min(390, this.w - 40);
-    const titleWidths = PASSAGES.map((item) => graphemes(item.title).length + 2);
+    const titleWidths = WORKS.map((item) => graphemes(item.title).length + 2);
     const totalWidth = titleWidths.reduce((sum, value) => sum + value, 0);
     let navX = (this.w - navWidth) / 2;
-    PASSAGES.forEach((item, index) => {
+    WORKS.forEach((item, index) => {
       const itemWidth = navWidth * titleWidths[index] / totalWidth;
       this.button(`scene-${index}`, item.title, navX, navY, itemWidth, 44, () => { this.libraryPage = index; this.notice = ""; this.render(); });
       this.actions.get(`scene-${index}`)!.label = `『${item.title}』を選ぶ`;
@@ -268,12 +279,13 @@ export class DeskScene extends Phaser.Scene {
     if (session.canUndo) this.button("undo", "元に戻す", 14, y, 78, 44, () => this.apply({ type: "undo" }));
     if (complete) {
       this.button("source", "出典を読む ↗", this.w / 2 - Math.min(152, this.w - 216) / 2, y, Math.min(152, this.w - 216), 44, () => window.open(problem.sourceUrl, "_blank", "noopener,noreferrer"), true);
-      this.button("again", "もう一度", this.w - 104, y, 90, 44, () => { if (this.currentPassage) void this.openPassage(this.currentPassage); });
+      this.button("again", "次の問題", this.w - 104, y, 90, 44, () => { if (this.currentPassage) void this.openWork(this.currentPassage.workId); });
     } else {
-      this.fitLabel(this.notice || (session.canCheck ? "ひとつにつながりました。読み通して確かめましょう。" : this.selected ? "左端が前、右端が後。選んだ紙片をつなぎます。" : "紙片を選び、相手の端へ。余白を動かすと、ほかの紙片が見つかります"), 24, this.h - 108, 12, this.w - 48, "#647465", 2, false);
-      if (session.canCheck) this.button("check", "読み通す →", this.w / 2 - Math.min(152, this.w - 216) / 2, y, Math.min(152, this.w - 216), 44, () => this.apply({ type: "check" }), true);
+      this.fitLabel((this.hintSelecting ? this.notice || "続きを知りたい紙片を選ぶ。塊は末尾が対象です。" : this.notice) || (session.canCheck ? "ひとつにつながりました。読み通して確かめましょう。" : this.selected ? "左端が前、右端が後。選んだ紙片をつなぎます。" : "紙片を選び、相手の端へ。余白を動かすと、ほかの紙片が見つかります"), 24, this.h - 108, 12, this.w - 48, "#647465", 2, false);
+      if (session.canCheck) this.button("check", "読み通す", this.w / 2 - Math.min(140, this.w - 240) / 2, y, Math.min(140, this.w - 240), 44, () => this.apply({ type: "check" }), true);
       else this.button("help", "遊び方", this.w / 2 - 39, y, 78, 44, () => this.openOverlay("help"));
-      this.button("hint", "手掛かり", this.w - 104, y, 90, 44, () => this.openOverlay("hint"));
+      this.button("hint", this.hintSelecting ? `取消 残り${session.hintsRemaining}` : `ヒント 残り${session.hintsRemaining}`, this.w - 116, y, 104, 44, () => this.toggleHint(), this.hintSelecting);
+      this.actions.get("hint")!.label = this.hintSelecting ? `ヒントを取り消す。残り${session.hintsRemaining}回` : `ヒント。残り${session.hintsRemaining}回。紙片を選ぶと続きを表示`;
     }
   }
 
@@ -295,6 +307,7 @@ export class DeskScene extends Phaser.Scene {
       this.actions.get("louder")!.label = "音量を上げる";
       this.actions.get("mute")!.label = this.volume === 0 ? "消音を解除" : "消音にする";
       this.button("motion", `動きを控える：${this.reduced ? "有効" : "無効"}`, x + 20, y + 190, width - 40, 44, () => { this.reduced = !this.reduced; this.render(); });
+      if (this.assembling) this.button("help", "遊び方", x + 20, bottom, 104, 44, () => this.openOverlay("help"));
     } else if (this.overlay === "books") {
       this.label("保存した本", x + 28, y + 28, 25, 0, "#354b40", true);
       this.label("作品の取り込みは休止しています。保存データはそのまま残っています。新しいルールでは、手で選び直した3作品の抜粋で遊べます。", x + 28, y + 82, 14, width - 56);
@@ -307,7 +320,7 @@ export class DeskScene extends Phaser.Scene {
         this.actions.get("books-next")!.label = "次の保存した本";
       }
     } else if (this.overlay === "hint") {
-      this.label("手掛かり", x + 28, y + 28, 25, 0, "#354b40", true);
+      this.label("読む手掛かり", x + 28, y + 28, 25, 0, "#354b40", true);
       const hints = this.session!.problem.hints;
       this.label(`${this.hintIndex + 1} / ${hints.length}`, x + width - 74, y + 38, 11, 0, "#817462");
       this.label(hints[this.hintIndex], x + 28, y + 99, 18, width - 56, "#475a4c", true);
@@ -320,14 +333,18 @@ export class DeskScene extends Phaser.Scene {
       this.label(`紙片をドラッグして、相手の端へ。
 紙片を選んでから相手の端をタップしてもつながります。
 
-選んだ紙片の切れ目をタップすると外せます。正誤は最後に読み通すまで分かりません。
+選んだ紙片の切れ目をタップすると外せます。
+
+ヒントは一問3回。取消・再表示は減りません。
+新しい問題を始めると3回に戻ります。
 
 余白をドラッグして移動。二本指・ホイールで拡大縮小。`, x + 28, y + 80, 14, width - 56);
-      if (height >= 460) this.label(`矢印で移動、Enterで選択、[ と ]で前後へ。
+      this.button("reading-clues", "読む手掛かり", x + 20, bottom, 112, 44, () => this.openOverlay("hint"));
+      if (height >= 460 && this.w >= 700) this.label(`矢印で移動、Enterで選択、[ と ]で前後へ。
 Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。`, x + 28, bottom - 72, 11, width - 56, "#727668");
     } else {
       this.label("作品選択に戻りますか", x + 28, y + 34, 23, width - 56, "#354b40", true);
-      this.label("途中の配置は保存されません。", x + 28, y + 106, 14, width - 56);
+      this.label("途中の配置は保存されません。次は新しい問題になります。", x + 28, y + 106, 14, width - 56);
       this.button("confirm", "作品選択に戻る", x + 24, bottom, 134, 44, () => this.leave());
     }
     this.button("close", this.overlay === "leave" ? "パズルを続ける" : "閉じる", x + width - 126, bottom, 102, 44, () => this.closeOverlay(), true);
@@ -335,21 +352,22 @@ Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。`, x + 28, b
 
   private publish(): void {
     const actions = [...this.actions].map(([id, action]) => ({ id, label: action.label }));
-    const snapshot: DeskSnapshot = { mode: this.overlay ?? this.session?.state.phase ?? "selection", title: this.session ? `青空パズル · ${this.session.problem.title}` : "青空パズル", status: this.notice, actions, pieces: [] };
+    const snapshot: DeskSnapshot = { mode: this.overlay ?? (this.hintSelecting ? "hint-select" : undefined) ?? this.session?.state.phase ?? "selection", title: this.session ? `青空パズル · ${this.session.problem.title}` : "青空パズル", status: this.notice || (this.hintSelecting ? "続きを知りたい紙片を選ぶ。塊は末尾が対象です。" : ""), actions, pieces: [] };
     if (this.session && !this.overlay) {
       if (this.session.state.phase === "complete") snapshot.original = this.session.problem.original;
       else if (this.assembling) {
         snapshot.pieces = this.session.state.chains.map((chain) => ({ id: chain.id, text: this.session!.text(chain), selected: chain.id === this.selected }));
-        if (this.selected) this.session.state.chains.forEach((chain) => {
+        snapshot.description = `ヒントは残り${this.session.hintsRemaining}回。` + this.hintDescription;
+        if (this.selected && !this.hintSelecting) this.session.state.chains.forEach((chain) => {
           if (chain.id !== this.selected) actions.push({ id: `join:before:${chain.id}`, label: `「${this.session!.text(chain)}」の前につなぐ` }, { id: `join:after:${chain.id}`, label: `「${this.session!.text(chain)}」の後につなぐ` });
           else chain.bonds.forEach((_, index) => actions.push({ id: `split:${chain.id}:${index}`, label: `${index + 1}番目の切れ目を外す` }));
         });
       }
     }
     if (this.overlay === "hint") snapshot.description = this.session!.problem.hints[this.hintIndex];
-    if (this.overlay === "help") snapshot.description = "紙片をドラッグして相手の端へ。選んでから相手の端をタップしてもつながります。選んだ紙片の切れ目をタップすると外せます。正誤は最後に読み通すまで分かりません。余白をドラッグして移動。二本指・ホイールで拡大縮小。矢印で移動、Enterで選択、[ と ]で前後へ。Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。";
+    if (this.overlay === "help") snapshot.description = "紙片をドラッグして相手の端へ。選んでから相手の端をタップしてもつながります。選んだ紙片の切れ目をタップすると外せます。ヒントは一問3回。取消・再表示は減りません。新しい問題を始めると3回に戻ります。余白をドラッグして移動。二本指・ホイールで拡大縮小。矢印で移動、Enterで選択、[ と ]で前後へ。Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。";
     if (this.overlay === "books") snapshot.description = "作品の取り込みは休止しています。保存データはそのまま残っています。" + this.saved.map((book) => `${book.title}・${book.author}`).join("。 ");
-    if (this.overlay === "leave") snapshot.description = "途中の配置は保存されません。";
+    if (this.overlay === "leave") snapshot.description = "途中の配置は保存されません。次は新しい問題になります。";
     this.bridge.publish(snapshot);
   }
 
@@ -370,6 +388,11 @@ Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。`, x + 28, b
     if (this.alive) { this.notice = message; this.busy = false; this.render(); }
   }
 
+  private async openWork(workId: string): Promise<void> {
+    try { await this.openPassage(drawPassage(PASSAGES, workId, this.lastPassageByWork.get(workId))); }
+    catch (error) { await this.report(error); }
+  }
+
   private async openPassage(passage: CuratedPassage): Promise<void> {
     const request = ++this.serial;
     this.busy = true; this.notice = "準備中です。"; this.render();
@@ -379,16 +402,51 @@ Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。`, x + 28, b
       if (!this.alive || request !== this.serial) return;
       this.clearPapers();
       this.currentPassage = passage;
+      this.lastPassageByWork.set(passage.workId, passage.id);
+      this.hintSelecting = false; this.hintTarget = undefined; this.hintDescription = "";
       this.session = new Session(problem);
       this.selected = undefined; this.focused = undefined; this.overlay = undefined; this.busy = false; this.notice = "";
       this.hintIndex = 0; this.begin();
     } catch (error) { if (this.alive && request === this.serial) await this.report(error); }
   }
 
-  private openOverlay(overlay: Overlay): void { if (overlay === "hint" && !this.assembling) return; this.cancelGesture(); this.overlay = overlay; this.render(); }
+  private toggleHint(): void {
+    if (!this.assembling) return;
+    this.cancelGesture();
+    this.hintSelecting = !this.hintSelecting;
+    this.hintTarget = undefined; this.hintDescription = "";
+    this.selected = undefined; this.notice = "";
+    this.syncSelection(); this.render();
+  }
+
+  private revealHint(chainId: string): void {
+    const session = this.session;
+    if (!session || !this.hintSelecting) return;
+    const result = session.hintFor(chainId);
+    if (result.kind !== "revealed") {
+      this.notice = result.kind === "exhausted" ? "残り0回です。前に見た紙片は再表示できます。" : "続きを表示できません。別の紙片を選んでください。";
+      this.render(); return;
+    }
+    this.hintSelecting = false;
+    this.hintTarget = result.targetId;
+    this.selected = undefined; this.focused = undefined;
+    const target = session.problem.tiles.find((tile) => tile.id === result.targetId)!;
+    const anchor = session.problem.tiles.find((tile) => tile.id === result.anchorId)!;
+    this.hintDescription = `「${anchor.text}」の続きは「${target.text}」です。`;
+    this.notice = result.repeated ? "前に見たヒントです。色のついた部分が続きです。" : "色のついた部分が続きです。自動ではつなぎません。";
+    this.syncSelection();
+    const chain = session.state.chains.find((item) => item.tiles.includes(result.targetId))!;
+    const paper = this.views.get(chain.id)!.paper;
+    const point = paper.hint(chain.tiles.indexOf(result.targetId));
+    if (point) this.boardCamera.centerOn(paper.x + paper.width / 2, paper.y + point.y);
+    this.world.bringToTop(paper); this.world.bringToTop(this.ports);
+    this.render();
+  }
+
+  private openOverlay(overlay: Overlay): void { if (overlay === "hint" && !this.assembling) return; this.cancelGesture(); this.hintSelecting = false; this.overlay = overlay; this.render(); }
   private closeOverlay(): void { this.overlay = undefined; this.notice = ""; this.render(); this.game.canvas.focus({ preventScroll: true }); }
   private leave(): void {
-    this.cancelGesture(); this.clearPapers(); this.session = undefined; this.currentPassage = undefined; this.overlay = undefined; this.selected = undefined; this.focused = undefined; this.notice = "";
+    this.cancelGesture(); this.hintSelecting = false; this.hintTarget = undefined; this.hintDescription = ""; this.clearPapers(); this.session = undefined; this.currentPassage = undefined; this.overlay = undefined; this.selected = undefined; this.focused = undefined; this.notice = "";
     this.boardCamera.setZoom(1).setScroll(0, 0); this.render();
   }
 
@@ -458,9 +516,10 @@ Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。`, x + 28, b
   private apply(command: Command): void {
     if (!this.session || this.overlay) return;
     this.cancelGesture();
+    this.hintSelecting = false; this.hintTarget = undefined; this.hintDescription = "";
     const wasComplete = this.session.state.phase === "complete";
     const event = this.session.dispatch(command);
-    if (event === "none") return;
+    if (event === "none") { this.syncSelection(); this.render(); return; }
     if (command.type === "join") {
       this.selected = this.session.state.chains.find((chain) => chain.id === command.target || chain.id === command.source)?.id;
       this.focused = this.selected;
@@ -492,9 +551,13 @@ Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。`, x + 28, b
   }
 
   private syncSelection(): void {
-    for (const [id, view] of this.views) view.paper.focus(id === this.selected, id === this.focused);
+    for (const [id, view] of this.views) {
+      view.paper.focus(id === this.selected, id === this.focused);
+      const chain = this.session?.state.chains.find((item) => item.id === id);
+      view.paper.hint(this.hintTarget ? chain?.tiles.indexOf(this.hintTarget) ?? -1 : -1);
+    }
     this.ports.clear();
-    if (!this.selected || !this.assembling || this.overlay) return;
+    if (!this.selected || !this.assembling || this.overlay || this.hintSelecting) return;
     const zoom = this.boardCamera.zoom;
     for (const [id, { paper }] of this.views) {
       if (id === this.selected) continue;
@@ -550,7 +613,7 @@ Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。`, x + 28, b
     this.suppressRelease = false;
     const point = this.worldPoint(pointer);
     if (this.assembling) {
-      const target = this.selected ? this.tapTarget(point) : undefined;
+      const target = this.selected && !this.hintSelecting ? this.tapTarget(point) : undefined;
       if (target) { this.target = target; this.gesture = { kind: "pan", down: { x: pointer.x, y: pointer.y }, scroll: { x: this.boardCamera.scrollX, y: this.boardCamera.scrollY } }; return; }
       const hit = this.hitPaper(point);
       if (hit) {
@@ -585,6 +648,11 @@ Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。`, x + 28, b
       return;
     }
     if (!gesture.moved && distance <= 6) return;
+    if (this.hintSelecting) {
+      this.views.get(gesture.id)?.paper.settle(false);
+      this.gesture = { kind: "pan", down: gesture.down, scroll: { x: this.boardCamera.scrollX, y: this.boardCamera.scrollY } };
+      return;
+    }
     if (!gesture.moved) { gesture.moved = true; this.selected = gesture.id; playCue(this, "lift", this.volume); }
     const paper = this.views.get(gesture.id)!.paper;
     const point = this.worldPoint(pointer);
@@ -639,6 +707,7 @@ Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。`, x + 28, b
       return;
     }
     const view = this.views.get(gesture.id)!;
+    if (this.hintSelecting) { this.revealHint(gesture.id); return; }
     if (gesture.moved) {
       const target = this.target;
       const position = { x: view.paper.x, y: view.paper.y };
@@ -650,7 +719,7 @@ Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。`, x + 28, b
     const point = this.worldPoint(pointer);
     const seam = view.paper.seams.find((seam) => Phaser.Math.Distance.Between(point.x, point.y, view.paper.x + seam.x, view.paper.y + seam.y) * this.boardCamera.zoom <= 19);
     if (this.selected === gesture.id && seam) this.apply({ type: "split", chain: gesture.id, boundary: seam.boundary });
-    else { this.selected = gesture.id; this.focused = gesture.id; this.syncSelection(); this.render(); }
+    else { this.hintTarget = undefined; this.hintDescription = ""; this.notice = ""; this.selected = gesture.id; this.focused = gesture.id; this.syncSelection(); this.render(); }
   }
 
   private cancelGesture = (): void => {
@@ -682,7 +751,7 @@ Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。`, x + 28, b
     if (event.key === "Escape") {
       event.preventDefault(); this.cancelGesture();
       if (this.overlay) this.closeOverlay();
-      else { this.selected = undefined; this.syncSelection(); this.render(); }
+      else { this.hintSelecting = false; this.hintTarget = undefined; this.hintDescription = ""; this.notice = ""; this.selected = undefined; this.syncSelection(); this.render(); }
       return;
     }
     if (this.overlay || !this.session) return;
@@ -701,8 +770,8 @@ Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。`, x + 28, b
         this.focused = chains[(current + direction + chains.length) % chains.length].id;
         this.focus(`piece:${this.focused}`); this.publish();
       } else if (key === "enter" && this.focused) this.dispatch(`piece:${this.focused}`);
-      else if ((key === "[" || key === "]") && this.selected && this.focused) this.apply({ type: "join", source: this.selected, target: this.focused, side: key === "[" ? "before" : "after" });
-      else if (key === "delete") {
+      else if ((key === "[" || key === "]") && !this.hintSelecting && this.selected && this.focused) this.apply({ type: "join", source: this.selected, target: this.focused, side: key === "[" ? "before" : "after" });
+      else if (key === "delete" && !this.hintSelecting) {
         const chain: Chain | undefined = chains.find((chain) => chain.id === (this.selected ?? this.focused));
         const boundary = chain?.bonds.findIndex((known) => !known) ?? -1;
         if (chain && boundary >= 0) this.apply({ type: "split", chain: chain.id, boundary });

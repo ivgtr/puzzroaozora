@@ -68,6 +68,8 @@ export class Paper extends Phaser.GameObjects.Container {
   private shadows: Phaser.GameObjects.Graphics[];
   private edgeInk: Phaser.GameObjects.Graphics;
   private lifted = false;
+  private hintInk: Phaser.GameObjects.Graphics;
+  private fragmentRanges: { start: number; end: number }[];
 
   constructor(scene: Phaser.Scene, text: string, columns: number, fragments: readonly string[] = [text], bonds: readonly boolean[] = []) {
     super(scene, 0, 0);
@@ -120,7 +122,13 @@ export class Paper extends Phaser.GameObjects.Container {
     });
     this.edgeInk = scene.add.graphics().lineStyle(1.5, GRID).strokePoints(edge, true).setAlpha(0);
     this.outline = scene.add.graphics();
-    this.add([...this.shadows, ground, grid, ink, cuts, this.edgeInk, this.outline]);
+    this.hintInk = scene.add.graphics();
+    let start = 0;
+    this.fragmentRanges = fragments.map((part) => {
+      const end = start + graphemes(part).length;
+      const range = { start, end }; start = end; return range;
+    });
+    this.add([...this.shadows, ground, this.hintInk, grid, ink, cuts, this.edgeInk, this.outline]);
     const first = this.layout.glyphs[0];
     const last = this.layout.glyphs[this.layout.glyphs.length - 1];
     this.front = { x: 0, y: first ? first.y + CELL / 2 : height / 2 };
@@ -130,6 +138,18 @@ export class Paper extends Phaser.GameObjects.Container {
   focus(selected: boolean, focused = false): void {
     this.outline.clear();
     if (selected || focused) this.outline.lineStyle(2, selected ? 0xa45f46 : 0x65796a, .95).strokeRoundedRect(-4, -4, this.width + 8, this.height + 8, 2);
+  }
+
+  /** Mark only the explicitly requested successor, even inside a provisional group. */
+  hint(fragmentIndex: number): Point | undefined {
+    this.hintInk.clear();
+    const range = this.fragmentRanges[fragmentIndex];
+    if (!range) return;
+    const glyphs = this.layout.glyphs.filter((glyph) => glyph.index >= range.start && glyph.index < range.end);
+    this.hintInk.fillStyle(0xe3c66f, .58);
+    for (const glyph of glyphs) this.hintInk.fillRect(glyph.x, glyph.y, glyph.advance, CELL);
+    const first = glyphs[0];
+    return first ? { x: first.x + CELL / 2, y: first.y + CELL / 2 } : undefined;
   }
 
   /** Raise only the cast shadow, leaving text, ports and pointer geometry fixed. */

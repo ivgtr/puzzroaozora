@@ -12,8 +12,8 @@ function scene(id: string, work: keyof typeof works, premise: string, marked: st
   return { id, ...works[work], curatedVersion: 1, difficulty: "easy", sceneTitle: works[work].title, premise, original, fragments: comparisonText(marked).split("|"), location, hints, note };
 }
 
-// Reviewed against the linked Aozora originals on 2026-10-01. These are three
-// contiguous excerpts, with original spelling and punctuation, not adapted prose.
+// Reviewed against the linked Aozora originals on 2026-10-01. Each work has two
+// distinct contiguous excerpts, preserving original spelling and punctuation.
 // | denotes an authored boundary. Freely swappable descriptions stay together;
 // some chunks cross a sentence boundary to retain the surrounding relationship.
 // Source/location/original/editorial notes are for the completion view only.
@@ -53,5 +53,41 @@ export const PASSAGES: CuratedPassage[] = [
       "建物の中と外で、できることの違いにも注目しましょう。",
     ],
     "反復する副詞を対応する動作とまとめ、買う二品を助詞込みで保持。計算台から受け渡し、退店から買物へ、場所と行動で追える境界とした。",
+  ),
+  scene(
+    "cat-pond-v3", "cat",
+    "ひとりになった猫が、あたりの様子をうかがう。",
+    "ようやくの思いで笹原を這い出すと|向うに大きな池がある。吾輩は池の前に坐って|どうしたらよかろうと考えて見た。別にこれという|分別も出ない。しばらくして泣いたら|書生がまた迎に来てくれるかと|考え付いた。ニャー、ニャーと試みに|やって見たが誰も来ない。そのうち池の上を|さらさらと風が渡って日が暮れかかる。腹が|非常に減って来た。泣きたくても声が出ない。",
+    "一・『ようやくの思いで笹原を這い出すと』〜『泣きたくても声が出ない。』",
+    [
+      "猫が思いついたことと、実際に試したことを区別してみましょう。",
+      "同じ場所がもう一度出てくるとき、どの場所を指しているでしょう。",
+      "声を出せたときと出せなくなったとき、周りや体の様子はどう変わったでしょう。",
+    ],
+    "池の発見とその前に坐る動作、思案と行き詰まり、試す声と実行を文の境をまたいでつないだ。風・日暮れ・空腹を独立した描写に分けず、発見から試行、時間経過へ進む関係を保った。",
+  ),
+  scene(
+    "lemon-coolness-v3", "lemon",
+    "手の中の小さな果実に、感覚が澄んでゆく。",
+    "その檸檬の冷たさは|たとえようもなくよかった。その頃私は|肺尖を悪くしていて|いつも身体に熱が出た。事実友達の誰彼に|私の熱を見せびらかすために|手の握り合いなどをしてみるのだが、|私の掌が誰のよりも熱かった。その熱い故だったのだろう、|握っている掌から身内に浸み透ってゆくような|その冷たさは快いものだった。",
+    "『その檸檬の冷たさは』の段落全文",
+    [
+      "冷たさと熱さは、それぞれ何についての感覚でしょう。",
+      "語り手が自分の熱さを確かめた方法に目を向けましょう。",
+      "心地よさの理由を考える部分では、どの経験が思い返されているでしょう。",
+    ],
+    "冷たさの評価から当時の体調へ、発熱の説明から友達との比較へ、それぞれ文をまたぐ紙片を置いた。比較の結論と『その熱い故』も保持し、同じ冷たさを述べる冒頭と結末を交換しにくくした。",
+  ),
+  scene(
+    "galaxy-path-v3", "galaxy",
+    "夜の丘へ向かう道に、かすかな光が見える。",
+    "ジョバンニは、もう露の降りかかった|小さな林のこみちを、|どんどんのぼって行きました。まっくらな草や、|いろいろな形に見えるやぶのしげみの間を、|その小さなみちが、一すじ白く|星あかりに照らしだされてあったのです。草の中には、|ぴかぴか青びかりを出す小さな虫もいて、ある葉は青くすかし出され、|ジョバンニは、さっきみんなの持って行った|烏瓜のあかりのようだとも思いました。",
+    "五・天気輪の柱『ジョバンニは、もう露の降りかかった』の段落全文",
+    [
+      "歩いている人と、その人が見ている道の描写を見分けましょう。",
+      "道を照らす光と、草の中の光は、どこから来るのでしょう。",
+      "目の前の光は、ジョバンニに何を思い出させているでしょう。",
+    ],
+    "歩行から道の描写、星あかりから草の中へ視線が移る箇所を文またぎの紙片にした。虫の光と透ける葉はまとめ、独立して交換できる描写にせず、道を指す言葉と光の連想で追える分割とした。",
   ),
 ];
