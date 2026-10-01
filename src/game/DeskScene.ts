@@ -147,7 +147,7 @@ export class DeskScene extends Phaser.Scene {
     const container = this.add.container(x, y);
     const shape = this.add.graphics().fillStyle(accent ? 0xa3503e : 0xebe3cf).fillRoundedRect(0, 0, width, height, 2);
     shape.lineStyle(1, accent ? 0x8e5848 : 0xbcb092, .7).lineBetween(0, height - 1, width, height - 1);
-    const label = this.add.text(width / 2, height / 2, text, { fontFamily: "DeskSans", fontSize: width < 95 ? "13px" : "15px", color: accent ? "#fffaf0" : "#292c25", align: "center", wordWrap: { width: width - 16, useAdvancedWrap: true } }).setOrigin(.5).setResolution(Math.min(2, devicePixelRatio || 1));
+    const label = this.add.text(width / 2, height / 2, text, { fontFamily: "DeskSans", fontSize: width < 95 ? "13px" : "15px", color: accent ? "#fffaf0" : "#292c25", align: "center", wordWrap: width >= 40 ? { width: width - 16, useAdvancedWrap: true } : undefined }).setOrigin(.5).setResolution(Math.min(2, devicePixelRatio || 1));
     container.add([shape, label]).setSize(width, height).setInteractive(new Phaser.Geom.Rectangle(0, 0, width, height), Phaser.Geom.Rectangle.Contains);
     let armed = false;
     container.on("pointerover", () => { shape.setAlpha(.84); this.game.canvas.style.cursor = "pointer"; });
