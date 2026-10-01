@@ -148,12 +148,12 @@ export class DeskScene extends Phaser.Scene {
     const shape = this.add.graphics().fillStyle(accent ? 0xa3503e : 0xebe3cf).fillRoundedRect(0, 0, width, height, 2);
     shape.lineStyle(1, accent ? 0x8e5848 : 0xbcb092, .7).lineBetween(0, height - 1, width, height - 1);
     const label = this.add.text(width / 2, height / 2, text, { fontFamily: "DeskSans", fontSize: width < 95 ? "13px" : "15px", color: accent ? "#fffaf0" : "#292c25", align: "center", wordWrap: width >= 40 ? { width: width - 16, useAdvancedWrap: true } : undefined }).setOrigin(.5).setResolution(Math.min(2, devicePixelRatio || 1));
-    container.add([shape, label]).setSize(width, height).setInteractive(new Phaser.Geom.Rectangle(0, 0, width, height), Phaser.Geom.Rectangle.Contains);
+    container.add([shape, label]).setInteractive(new Phaser.Geom.Rectangle(0, 0, width, height), Phaser.Geom.Rectangle.Contains);
     let armed = false;
     container.on("pointerover", () => { shape.setAlpha(.84); this.game.canvas.style.cursor = "pointer"; });
-    container.on("pointerdown", () => { armed = true; container.y = y + 2; this.game.canvas.focus({ preventScroll: true }); });
-    container.on("pointerout", () => { armed = false; container.y = y; shape.setAlpha(1); this.game.canvas.style.cursor = "default"; });
-    container.on("pointerup", () => { container.y = y; if (armed) { armed = false; this.dispatch(id); } });
+    container.on("pointerdown", () => { armed = true; shape.y = 2; label.y = height / 2 + 2; this.game.canvas.focus({ preventScroll: true }); });
+    container.on("pointerout", () => { armed = false; shape.y = 0; label.y = height / 2; shape.setAlpha(1); this.game.canvas.style.cursor = "default"; });
+    container.on("pointerup", () => { shape.y = 0; label.y = height / 2; if (armed) { armed = false; this.dispatch(id); } });
     this.hud.add(container);
   }
 

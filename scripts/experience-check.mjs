@@ -18,8 +18,8 @@ try {
   const desktop=await browser.newContext({viewport:{width:1280,height:800},deviceScaleFactor:2});
   page=await desktop.newPage(); page.on('pageerror',error=>{errors.push(error.message); console.error('PAGE ERROR',error.stack);}); page.on('console',msg=>{if(msg.type()==='error')console.error('CONSOLE',msg.text());});
   await page.goto('http://127.0.0.1:5678'); await mode('library'); await shot('desktop-library');
-  await action('open-cat-first'); await mode('reading'); await shot('desktop-reading');
-  await action('begin'); await mode('assembling'); await shot('desktop-desk');
+  await page.mouse.click(300,577); await mode('reading'); await shot('desktop-reading');
+  await page.mouse.click(216,770); await mode('assembling'); await shot('desktop-desk');
   assert.equal(await page.locator('[data-original]').count(),0); assert.equal((await pieces()).length,12);
   // A real canvas drag into empty workspace, followed by immediate Undo.
   await page.mouse.move(80,146); await page.mouse.down(); await page.mouse.move(76,685,{steps:10}); await page.mouse.up();
