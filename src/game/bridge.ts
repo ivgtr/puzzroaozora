@@ -6,11 +6,9 @@ export interface DeskSnapshot {
   original?: string;
   actions: AccessibleAction[];
   pieces: { id: string; text: string; selected: boolean }[];
-  importField?: { x: number; y: number; width: number; initial: string };
 }
 export interface HostBridge {
   publish(snapshot: DeskSnapshot): void;
-  readImport(): string;
   fail(error: Error): void;
 }
 export interface GamePort {

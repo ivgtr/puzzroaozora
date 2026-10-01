@@ -1,29 +1,53 @@
-import { comparisonText, RULES, type Difficulty, type Passage } from "./text.ts";
+import { comparisonText, type Difficulty, type Passage } from "./text.ts";
 
+// Only editor-reviewed scenes belong to the reconstruction game. Existing saved
+// imports keep their Passage shape and remain readable without being migrated.
+export interface CuratedPassage extends Passage {
+  readonly curatedVersion: 1;
+  readonly sceneTitle: string;
+  readonly premise: string;
+  readonly hints: readonly string[];
+}
 export interface Tile { readonly id: string; readonly text: string }
-export interface Problem extends Omit<Passage, "fragments"> { readonly tiles: readonly Tile[]; readonly difficulty: Difficulty; readonly version: 2 }
+export interface Problem extends Omit<CuratedPassage, "fragments"> { readonly tiles: readonly Tile[]; readonly difficulty: Difficulty; readonly version: 3 }
 export interface Point { x: number; y: number }
+// Bonds remain as presentation boundaries for Paper; they are always provisional.
 export interface Chain extends Point { readonly id: string; readonly tiles: readonly string[]; readonly bonds: readonly boolean[] }
 export interface DeskState { readonly phase: "reading" | "assembling" | "complete"; readonly chains: readonly Chain[] }
-export type JoinEvent = "none" | "move" | "split" | "tentative" | "new" | "extend" | "bridge" | "complete" | "undo";
-export type Command = { type: "join"; source: string; target: string; side: "before" | "after" } | { type: "split"; chain: string; boundary: number } | { type: "move"; chain: string; point: Point } | { type: "undo" };
+export type JoinEvent = "none" | "move" | "split" | "tentative" | "incorrect" | "complete" | "undo";
+export type Command = { type: "join"; source: string; target: string; side: "before" | "after" } | { type: "split"; chain: string; boundary: number } | { type: "move"; chain: string; point: Point } | { type: "check" } | { type: "undo" };
+
+function hasCuration(passage: Passage | Problem): passage is CuratedPassage | Problem {
+  const scene = passage as Partial<CuratedPassage>;
+  return scene.curatedVersion === 1
+    && typeof scene.sceneTitle === "string" && scene.sceneTitle.trim().length > 0
+    && typeof scene.premise === "string" && scene.premise.trim().length > 0
+    && Array.isArray(scene.hints) && scene.hints.length >= 2 && scene.hints.length <= 3
+    && scene.hints.every((hint) => typeof hint === "string" && hint.trim().length > 0);
+}
+function validPieces(pieces: readonly string[]): boolean {
+  return pieces.length >= 8 && pieces.length <= 12 && pieces.every((text) => typeof text === "string" && text.trim().length > 0);
+}
 
 export function makeProblem(passage: Passage, difficulty: Difficulty = passage.difficulty, random: () => number = Math.random): Problem {
+  if (!hasCuration(passage)) throw new Error("この原稿は新しい遊び方の選定シーンではありません。保存した本は変更していません。");
+  if (!Array.isArray(passage.fragments) || !validPieces(passage.fragments)) throw new Error("選定シーンの紙片は8〜12枚必要です。");
   if (passage.fragments.join("") !== comparisonText(passage.original)) throw new Error("紙片と原文が一致しません。");
-  if (passage.fragments.length < RULES[difficulty].threshold || passage.fragments.length > 30 || passage.fragments.some((text) => !text)) throw new Error("紙片数が不正です。");
   const tiles = passage.fragments.map((text) => ({ id: crypto.randomUUID(), text }));
   for (let i = tiles.length - 1; i > 0; i--) {
-    const j = Math.floor(random() * (i + 1));
+    const draw = random();
+    if (!Number.isFinite(draw) || draw < 0 || draw >= 1) throw new Error("紙片を並べる乱数が不正です。");
+    const j = Math.floor(draw * (i + 1));
     [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
   }
   const { fragments: _fragments, ...metadata } = passage;
   void _fragments;
-  return { ...metadata, version: 2, difficulty, tiles };
+  return { ...metadata, version: 3, difficulty, tiles };
 }
 
-// Confirmed blocks must still admit a complete reconstruction. Group identical
-// strings, retain every possible occurrence, and memoize only failed placements.
-// This avoids greedy occurrence assignment and conflicting repeated-word locks.
+// A legacy validation utility, used only when loading a complete problem. It is
+// deliberately absent from gameplay commands: no partial join is ever checked.
+// Identical text remains interchangeable rather than tied to original positions.
 export function canReconstruct(original: string, blocks: readonly string[]): boolean {
   const counts = new Map<string, number>();
   for (const block of blocks) {
@@ -58,10 +82,11 @@ export class Session {
   constructor(problem: Problem) {
     this.problem = problem;
     this.tileText = new Map(problem.tiles.map((tile) => [tile.id, tile.text]));
-    if (this.tileText.size !== problem.tiles.length || problem.tiles.length < RULES[problem.difficulty].threshold || !canReconstruct(comparisonText(problem.original), problem.tiles.map((tile) => tile.text))) throw new Error("問題の紙片が不正です。");
+    if (problem.version !== 3 || !hasCuration(problem) || this.tileText.size !== problem.tiles.length || problem.tiles.some((tile) => !tile.id) || !validPieces(problem.tiles.map((tile) => tile.text)) || !canReconstruct(comparisonText(problem.original), problem.tiles.map((tile) => tile.text))) throw new Error("問題の紙片が不正です。");
   }
   get state(): DeskState { return this.current; }
   get canUndo(): boolean { return this.history.length > 0; }
+  get canCheck(): boolean { return this.current.phase === "assembling" && this.current.chains.length === 1; }
   text(chain: Chain): string { return chain.tiles.map((id) => this.tileText.get(id)!).join(""); }
 
   begin(positions: readonly Point[]): void {
@@ -74,17 +99,6 @@ export class Session {
     if (this.history.length > 64) this.history.shift();
     this.current = next;
   }
-  private blocks(chains: readonly Chain[]): string[] {
-    return chains.flatMap((chain) => {
-      const blocks: string[] = [];
-      let text = "";
-      chain.tiles.forEach((id, index) => {
-        text += this.tileText.get(id)!;
-        if (!chain.bonds[index]) { blocks.push(text); text = ""; }
-      });
-      return blocks;
-    });
-  }
 
   dispatch(command: Command): JoinEvent {
     if (command.type === "undo") {
@@ -95,6 +109,13 @@ export class Session {
     }
     if (this.current.phase !== "assembling") return "none";
     const chains = this.current.chains;
+    if (command.type === "check") {
+      if (!this.canCheck) return "none";
+      // An unsuccessful reading does not change the arrangement or consume Undo.
+      if (this.text(chains[0]) !== comparisonText(this.problem.original)) return "incorrect";
+      this.commit({ ...this.current, phase: "complete" });
+      return "complete";
+    }
     if (command.type === "move") {
       const chain = chains.find((c) => c.id === command.chain);
       const { x, y } = command.point;
@@ -105,7 +126,7 @@ export class Session {
     if (command.type === "split") {
       const chain = chains.find((c) => c.id === command.chain);
       const at = command.boundary;
-      if (!chain || !Number.isInteger(at) || at < 0 || at >= chain.bonds.length || chain.bonds[at]) return "none";
+      if (!chain || !Number.isInteger(at) || at < 0 || at >= chain.tiles.length - 1) return "none";
       const leftTiles = chain.tiles.slice(0, at + 1);
       const rightTiles = chain.tiles.slice(at + 1);
       const left: Chain = { ...chain, id: leftTiles[0], tiles: leftTiles, bonds: chain.bonds.slice(0, at) };
@@ -118,23 +139,10 @@ export class Session {
     const target = chains.find((c) => c.id === command.target);
     if (!source || !target) return "none";
     const [left, right] = command.side === "before" ? [source, target] : [target, source];
-    // Chain identity is its first tile, not whichever object happened to be the
-    // drop target. Prepending and later splitting cannot create duplicate IDs.
-    let joined: Chain = { id: left.tiles[0], tiles: [...left.tiles, ...right.tiles], bonds: [...left.bonds, false, ...right.bonds], x: target.x, y: target.y };
-    const sourceKnown = source.bonds.some(Boolean);
-    const targetKnown = target.bonds.some(Boolean);
-    let event: JoinEvent = "tentative";
-    const replace = (value: Chain) => chains.flatMap((c) => c === source ? [] : c === target ? [value] : [c]);
-    if (sourceKnown || targetKnown || joined.tiles.length >= RULES[this.problem.difficulty].threshold) {
-      const confirmed = { ...joined, bonds: joined.bonds.map(() => true) };
-      if (canReconstruct(comparisonText(this.problem.original), this.blocks(replace(confirmed)))) {
-        joined = confirmed;
-        event = sourceKnown && targetKnown ? "bridge" : sourceKnown || targetKnown ? "extend" : "new";
-      }
-    }
-    const next = replace(joined);
-    const complete = next.length === 1 && joined.tiles.length === this.problem.tiles.length && this.text(joined) === comparisonText(this.problem.original);
-    this.commit({ phase: complete ? "complete" : "assembling", chains: next });
-    return complete ? "complete" : event;
+    // The first tile owns chain identity, including after a prepend or split.
+    const joined: Chain = { id: left.tiles[0], tiles: [...left.tiles, ...right.tiles], bonds: [...left.bonds, false, ...right.bonds], x: target.x, y: target.y };
+    const next = chains.flatMap((c) => c === source ? [] : c === target ? [joined] : [c]);
+    this.commit({ phase: "assembling", chains: next });
+    return "tentative";
   }
 }

@@ -1,12 +1,12 @@
 import Phaser from "phaser";
-import { DeskScene, UI_TEXT, passagePreview } from "./DeskScene.ts";
+import { DeskScene, UI_TEXT } from "./DeskScene.ts";
 import { prepareFont } from "./fonts.ts";
 import { PASSAGES } from "../data/passages.ts";
 import type { GamePort, HostBridge } from "./bridge.ts";
 
 export async function startGame(parent: HTMLElement, bridge: HostBridge, signal: AbortSignal): Promise<GamePort> {
-  await prepareFont(UI_TEXT + PASSAGES.map((passage) => passage.title + passage.author + passagePreview(passage.original)).join(""), "DeskSans");
-  await prepareFont("…0123456789青空の修復机" + PASSAGES.map((passage) => passage.title).join(""), "DeskSerif");
+  await prepareFont(UI_TEXT + PASSAGES.map((passage) => passage.title + passage.author + passage.sceneTitle + passage.premise + passage.hints.join("")).join(""), "DeskSans");
+  await prepareFont(UI_TEXT + PASSAGES.map((passage) => passage.title + passage.sceneTitle + passage.premise + passage.hints.join("")).join(""), "DeskSerif");
   signal.throwIfAborted();
   return new Promise((resolve, reject) => {
     const scene = new DeskScene(bridge, () => queueMicrotask(() => {
@@ -35,7 +35,7 @@ export async function startGame(parent: HTMLElement, bridge: HostBridge, signal:
         parent,
         width: parent.clientWidth,
         height: parent.clientHeight,
-        backgroundColor: "#3e5149",
+        backgroundColor: "#e7e9df",
         scene,
         autoFocus: false,
         disableContextMenu: true,

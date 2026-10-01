@@ -36,7 +36,7 @@ export function layoutManuscript(text: string, columns: number): ManuscriptLayou
 // Deal in the already shuffled order. Pack by actual paper width, never by the
 // source sentence or fixed column count; narrow screens grow downward, not sideways.
 export function dealManuscript(texts: readonly string[], columns: number, viewportWidth: number): { x: number; y: number }[] {
-  const margin = 32, gap = 38;
+  const margin = viewportWidth < 700 ? 28 : 32, gap = viewportWidth < 700 ? 24 : 38;
   const available = Math.max(260, viewportWidth - margin * 2);
   let x = 0, y = 32, rowHeight = 0;
   return texts.map((text) => {

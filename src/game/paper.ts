@@ -6,7 +6,7 @@ import type { Point } from "./model.ts";
 export const INK = 0x292c25;
 export const PAPER = 0xf8f2e3;
 export const GRID = 0xa96555;
-export const MAT = 0x3e5149;
+export const MAT = 0xe7e9df;
 export interface Seam extends Point { boundary: number }
 let serial = 0;
 
@@ -129,7 +129,7 @@ export class Paper extends Phaser.GameObjects.Container {
 
   focus(selected: boolean, focused = false): void {
     this.outline.clear();
-    if (selected || focused) this.outline.lineStyle(2, selected ? 0xd9b16b : 0xf9f5e9, .95).strokeRoundedRect(-4, -4, this.width + 8, this.height + 8, 2);
+    if (selected || focused) this.outline.lineStyle(2, selected ? 0xa45f46 : 0x65796a, .95).strokeRoundedRect(-4, -4, this.width + 8, this.height + 8, 2);
   }
 
   /** Raise only the cast shadow, leaving text, ports and pointer geometry fixed. */
@@ -142,7 +142,7 @@ export class Paper extends Phaser.GameObjects.Container {
     this.setElevation(false, animate);
   }
 
-  /** A brief dry-ink edge impression after a confirmed join, never a hint. */
+  /** A brief dry-ink edge impression after every join, never a correctness hint. */
   confirm(animate = true): void {
     this.settle(animate);
     this.scene.tweens.killTweensOf(this.edgeInk);

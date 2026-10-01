@@ -7,15 +7,19 @@ import { dealManuscript, CELL, PAD, layoutManuscript } from "../src/game/layout.
 import { cleanAozora } from "../src/lib/aozora.ts";
 import { parseImportUrl } from "../src/lib/books.ts";
 
-test("ten distinct sourced manuscripts preserve every original character and phrase boundary", () => {
-  assert.equal(PASSAGES.length, 10);
-  assert.equal(new Set(PASSAGES.map((passage) => passage.original)).size, 10);
+test("three curated scenes preserve source text and provide atmosphere plus reasoning hints", () => {
+  assert.equal(PASSAGES.length, 3);
+  assert.equal(new Set(PASSAGES.map((passage) => passage.original)).size, 3);
   assert.equal(new Set(PASSAGES.map((passage) => passage.workId)).size, 3);
   for (const passage of PASSAGES) {
     assert.equal(passage.fragments.join(""), comparisonText(passage.original));
     assert.ok(passage.sourceUrl.startsWith("https://www.aozora.gr.jp/cards/"));
     assert.ok(passage.location && passage.note);
-    assert.ok(passage.fragments.length >= 10 && passage.fragments.length <= 30);
+    assert.equal(passage.curatedVersion, 1);
+    assert.ok(passage.sceneTitle && passage.premise);
+    assert.ok(passage.hints.length >= 2 && passage.hints.length <= 3);
+    assert.ok(passage.hints.every((hint) => hint.trim().length > 0));
+    assert.ok(passage.fragments.length >= 8 && passage.fragments.length <= 12);
     assert.ok(passage.fragments.every((fragment) => graphemes(fragment).length >= 3));
     for (const difficulty of ["easy", "normal", "hard"] as Difficulty[]) assert.doesNotThrow(() => makeProblem(passage, difficulty));
     console.log(`${passage.id}: ${graphemes(comparisonText(passage.original)).length} characters, ${passage.fragments.length} pieces (${passage.difficulty})`);
