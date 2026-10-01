@@ -16,7 +16,7 @@ const join = async (left,right) => { const id=(await pieces()).find(p=>p.text===
 const shot = async (name) => { await page.waitForTimeout(550); await page.screenshot({path:`/tmp/evidence/${name}.png`}); };
 try {
   const desktop=await browser.newContext({viewport:{width:1280,height:800},deviceScaleFactor:2});
-  page=await desktop.newPage(); page.on('pageerror',error=>errors.push(error.message));
+  page=await desktop.newPage(); page.on('pageerror',error=>{errors.push(error.message); console.error('PAGE ERROR',error.stack);}); page.on('console',msg=>{if(msg.type()==='error')console.error('CONSOLE',msg.text());});
   await page.goto('http://127.0.0.1:5678'); await mode('library'); await shot('desktop-library');
   await action('open-cat-first'); await mode('reading'); await shot('desktop-reading');
   await action('begin'); await mode('assembling'); await shot('desktop-desk');
@@ -67,7 +67,7 @@ try {
   await shot('desktop-hard');
   await desktop.close();
   const mobile=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true});
-  page=await mobile.newPage(); page.on('pageerror',error=>errors.push(error.message));
+  page=await mobile.newPage(); page.on('pageerror',error=>{errors.push(error.message); console.error('PAGE ERROR',error.stack);}); page.on('console',msg=>{if(msg.type()==='error')console.error('CONSOLE',msg.text());});
   await page.goto('http://127.0.0.1:5678'); await mode('library'); await shot('mobile-library');
   await action('open-cat-first'); await mode('reading'); await shot('mobile-reading');
   await action('begin'); await mode('assembling'); await shot('mobile-desk');
@@ -99,5 +99,5 @@ try {
   assert.deepEqual(errors,[]);
   fs.writeFileSync('/tmp/evidence/results.json',JSON.stringify({checks,errors,desktop:'1280x800 DPR2',mobile:'390x844 DPR2; 844x390 rotation',note:'Real pointer/touch representative interactions; full completion uses the shared accessible commands. No physical-device or human listening claim.'},null,2));
   console.log(JSON.stringify({checks,errors},null,2));
-} catch(error) { if(page) await page.screenshot({path:'/tmp/evidence/failure.png'}); throw error; }
+} catch(error) { console.error('CAPTURED ERRORS',JSON.stringify(errors)); if(page){ await page.screenshot({path:'/tmp/evidence/failure.png'}); fs.writeFileSync('/tmp/evidence/failure.txt', await page.locator('body').innerText()+'\n'+JSON.stringify(errors)); } throw error; }
 finally { await browser.close(); }

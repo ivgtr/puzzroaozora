@@ -110,6 +110,7 @@ export class DeskScene extends Phaser.Scene {
     this.boardCamera.setViewport(0, this.top, this.w, Math.max(80, this.h - this.top - 60));
     this.uiCamera.setSize(this.w, this.h);
     this.syncPaper();
+    if (this.manuscript) this.readingCamera();
     this.render();
   }
 
@@ -121,14 +122,13 @@ export class DeskScene extends Phaser.Scene {
 
   private fitLabel(text: string, x: number, y: number, size: number, width: number, color: string, lines = 1, serif = true): Phaser.GameObjects.Text {
     const label = this.label(text, x, y, size, width, color, serif);
-    const limit = size * 1.3 * lines + 6 * (lines - 1);
-    if (label.height <= limit) return label;
+    if (label.getWrappedText().length <= lines) return label;
     const chars = graphemes(text);
     let low = 0, high = chars.length;
     while (low < high) {
       const middle = Math.ceil((low + high) / 2);
       label.setText(chars.slice(0, middle).join("") + "…");
-      if (label.height <= limit) low = middle; else high = middle - 1;
+      if (label.getWrappedText().length <= lines) low = middle; else high = middle - 1;
     }
     return label.setText(chars.slice(0, low).join("") + "…");
   }
