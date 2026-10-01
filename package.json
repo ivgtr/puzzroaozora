@@ -1,26 +1,35 @@
 {
   "name": "puzzroaozora",
   "version": "0.1.0",
-  "description": "青空文庫の文学作品から抜粋した一節を並び替えるワードパズルゲーム",
+  "description": "原稿用紙の切れ端をつなぎ直す青空文庫の文章パズル",
   "private": true,
   "scripts": {
+    "predev": "node scripts/prepare-fonts.mjs",
     "dev": "next dev --turbopack -p 5678",
-    "build": "next build",
+    "prebuild": "node scripts/prepare-fonts.mjs",
+    "build": "next build --webpack",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test tests/*.test.ts"
   },
   "dependencies": {
     "next": "^16.2.2",
+    "phaser": "4.2.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
   },
   "devDependencies": {
+    "@fontsource/noto-sans-jp": "5.3.0",
+    "@fontsource/noto-serif-jp": "5.3.0",
     "@tailwindcss/postcss": "^4.2.2",
+    "@types/fontkit": "2.0.9",
     "@types/node": "^20.19.39",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "eslint": "^9.39.1",
     "eslint-config-next": "^16.2.2",
+    "fontkit": "2.0.4",
     "tailwindcss": "^4.2.2",
     "typescript": "^5.9.3"
   }

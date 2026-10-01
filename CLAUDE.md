@@ -1,54 +1,22 @@
-# CLAUDE.md
+# Repository guide
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This is a Next.js Pages Router host for a Phaser 4 manuscript reconstruction game. Read README.md and the three current game, UI, and source-data specifications in 計画/ before changing behavior. The second redesign (2026-10-01) supersedes the initial-reading, difficulty-threshold, and confirmed-join rules. The 2024 directory-structure proposal and prior verification entries are historical, not current requirements.
 
-## プロジェクト概要
+## Constraints
 
-青空パズル（Aozora Puzzle） — 青空文庫の文学作品から抜粋した一節を並び替えるワードパズルゲーム。Next.js (Pages Router) + TypeScript + Tailwind CSS v4 で構成。
+- The engine-independent `Session` in `src/game/model.ts` is the single authoritative puzzle state. Phaser owns one session. React only projects snapshots and owns the mount.
+- Keep the current three works: four editor-curated excerpts for 吾輩は猫である, seven for 檸檬, and four for 銀河鉄道の夜 (15 total), selected randomly without an immediate repeat within that work. Preserve 8–12 meaningful chunks per scene. Choose excerpts for literary value and source-position coverage, not equal counts or equal thirds. `makeProblem` accepts only `curatedVersion: 1` passages and creates `Problem` v3. Existing saved/imported passages are not implicitly eligible.
+- Every join is provisional and gives identical feedback regardless of correctness. Never check partial joins or lock seams. Reveal a correct neighbor only through the player-requested, three-use hint described below. Never encode original positions in IDs, paper patterns, layout, sound, or accessibility output. Identical text remains interchangeable.
+- Check exact original order only when the player explicitly chooses 読み通す after assembling all chunks into one chain. A mismatch preserves the arrangement and gives no seam-level feedback. A successful join alone never completes the scene.
+- Keep split and Undo. The explicit hint action selects a chain and highlights the successor of its last tile without joining it or validating the chain. Three unique reveals per Session; cancellation, unavailable successors, and repeated reveals are free. Undo never refunds uses; only a new attempt resets them. Authored semantic clues remain under 遊び方 → 読む手掛かり and do not reveal exact seams. No initial reading, difficulty selector, or original/source-link access before completion.
+- Selection is one paper invitation on the same desk, with small edge controls. Completion reveals the original manuscript and source. Do not bring back a dashboard or bookshelf selection surface.
+- Existing IndexedDB records remain untouched and are listed read-only. Imports and reimports are explicitly paused; do not migrate, delete, overwrite, decrypt, silently substitute, or route old data into new play. Retain dormant source/import utilities without expanding infrastructure.
+- Solve ambiguity through passage and chunk curation, not grammar engines, language-model judging, or approximate-answer acceptance. Layout, DPI, line breaks, and blank manuscript cells never change comparison text. Use graphemes for visual boundaries.
+- Do not silently replace source text, spellings, missing glyphs, unavailable APIs, or a failed renderer. Report the failure. Do not add scoring, answer-submit APIs, a parallel DOM game, or a generic engine abstraction.
+- Use built-in Node tests for a few invariants. Do not expand permanent CI with large seed sweeps, browsers, or source-network requests. Fonts come from pinned packages during predev/prebuild; do not commit font binaries.
+- Record only executed checks, briefly in the PR body. Do not accumulate screenshots, verification logs, or temporary QA workflows in the repository. Human legibility, play balance, and listening remain separate from automated checks.
+- Keep PR #6 in draft. No merge or production deployment is authorized by this redesign work.
 
-外部APIとして libroaozora（青空文庫データ取得）を使用し、API不通時は `src/data/fallbackBooks.ts` のハードコードデータにフォールバックする。
+## Commands
 
-## コマンド
-
-```bash
-npm run dev          # 開発サーバー (Turbopack, port 5678)
-npm run build        # プロダクションビルド
-npm start            # プロダクションサーバー
-npm run lint         # ESLint
-```
-
-## 環境変数
-
-`.env.example` を参照。必須: `AOZORA_API_BASE_URL`。`PUZZLE_TOKEN_SECRET` は未設定時にdev用デフォルト値が使われる。
-
-## アーキテクチャ
-
-### データフロー
-
-1. **書籍一覧**: `GET /api/books/list` → `lib/aozora/client.ts` → libroaozora API (失敗時 fallbackBooks)
-2. **パズル生成**: `GET /api/puzzle/generate` → `lib/puzzle/generator.ts` が本文取得→テキスト正規化→一節抽出→分割→シャッフル→HMAC署名トークン生成
-3. **回答送信**: `POST /api/puzzle/submit` → トークン検証→正答判定→スコア計算
-
-### 主要モジュール
-
-- **`lib/aozora/cleaner.ts`** — 青空文庫テキストの正規化（ルビ除去、注記除去、ヘッダー/フッター除去）
-- **`lib/puzzle/segmenter.ts`** — テキストをチャンク分割。品詞推定はヒューリスティック（形態素解析ではない）
-- **`lib/puzzle/answerToken.ts`** — HMAC-SHA256による回答トークン生成・検証（改ざん防止）
-- **`lib/puzzle/random.ts`** — シード付きRNG（xmur3 + mulberry32）で決定論的パズル生成
-- **`lib/puzzle/difficulty.ts`** — 難易度設定（easy/normal/hard）。文字数範囲・セグメント数・制限時間を定義
-
-### フロントエンド
-
-`src/pages/index.tsx` に全ゲームロジックが集約。状態管理はReact hooksのみ（外部ライブラリなし）。CSSカスタムプロパティでライト/ダークモード対応。
-
-### 型定義
-
-- `src/types/puzzle.ts` — パズル関連型（PuzzleData, AnswerData, ResultData, Difficulty, PartOfSpeech）
-- `src/types/libro.ts` — libroaozora API型
-
-## 技術スタック
-
-- React 19 / Next.js 15 (Pages Router) / TypeScript 5
-- Tailwind CSS v4 (@tailwindcss/postcss)
-- ESLint 9
-- テストフレームワークは未導入
+Node 22; `npm ci`, `npm test`, `npm run lint`, `npm run typecheck`, `npm run build`. `npm run dev` serves port 5678. `AOZORA_API_BASE_URL` belongs to dormant import utilities; it does not enable imports in the current game.
