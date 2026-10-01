@@ -52,9 +52,9 @@ const open = async passage => { await page.evaluate(async p => { await window.__
 const clear = async () => { await escape(); await mode('assembling'); };
 const paperPoint = async (id, prefer = 'center') => page.evaluate(({ id, cell, prefer }) => { const s = window.__hintQaScene, p = s.views.get(id).paper, c = s.boardCamera; c.preRender(); const gs = [...p.layout.glyphs]; if (prefer === 'end') gs.reverse(); const candidates = gs.map(g => ({ x: p.x + g.x + g.advance / 2, y: p.y + g.y + cell / 2 })); if (prefer !== 'end') candidates.unshift({ x: p.x + p.width / 2, y: p.y + p.height / 2 }); for (const world of candidates) { const at = c.matrixCombined.transformPoint(world.x, world.y); if (at.x > 5 && at.x < s.scale.width - 5 && at.y > c.y + 5 && at.y < c.y + c.height - 5 && s.hitPaper(world)?.id === id) return { x: at.x, y: at.y }; } throw new Error(`No visible paper point ${id}`); }, { id, cell: CELL, prefer });
 const touchPoint = (id, x, y) => ({ id, x, y, radiusX: 2, radiusY: 2, force: 1 });
-const drag = async (from, to, steps = 7) => {
-  if (touch) { await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [touchPoint(0, from.x, from.y)] }); for (let step = 1; step <= steps; step++) { await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [touchPoint(0, from.x + (to.x - from.x) * step / steps, from.y + (to.y - from.y) * step / steps)] }); await pause(15); } await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); }
-  else { await page.mouse.move(from.x, from.y); await page.mouse.down(); await page.mouse.move(to.x, to.y, { steps }); await page.mouse.up(); }
+const drag = async (from, to, steps = 7, beforeRelease) => {
+  if (touch) { await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [touchPoint(0, from.x, from.y)] }); for (let step = 1; step <= steps; step++) { await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [touchPoint(0, from.x + (to.x - from.x) * step / steps, from.y + (to.y - from.y) * step / steps)] }); await pause(15); } if (beforeRelease) await beforeRelease(); await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); }
+  else { await page.mouse.move(from.x, from.y); await page.mouse.down(); await page.mouse.move(to.x, to.y, { steps }); if (beforeRelease) await beforeRelease(); await page.mouse.up(); }
   await pause();
 };
 const join = async (left, right) => { const target = await piece(left), source = await piece(right); await page.locator(`[data-piece="${source.id}"]`).evaluate(el => el.click()); await action(`join:after:${target.id}`); await page.waitForFunction(text => [...document.querySelectorAll('[data-piece]')].some(p => p.textContent === text), left + right); };
@@ -142,7 +142,23 @@ const clippedPortChecks = async vp => {
     await page.evaluate(({ source, target, x, outsideY }) => { const s = window.__hintQaScene, c = s.boardCamera; c.preRender(); const sourceAt = c.getWorldPoint(26, c.y + c.height / 2); s.apply({ type: 'move', chain: source, point: { x: sourceAt.x, y: sourceAt.y } }); const p = s.views.get(target).paper, endpoint = c.getWorldPoint(x, outsideY); s.apply({ type: 'move', chain: target, point: { x: endpoint.x - p.front.x, y: endpoint.y - p.front.y } }); }, { ...ids, x, outsideY });
     await tap(await paperPoint(ids.source)); assert.equal((await state()).selected, ids.source); const before = await state();
     await tap({ x, y: insideY }); const after = await state(); assert.deepEqual(after.chains, before.chains, `${edge}: a clipped endpoint must not accept a nearby inside tap`);
-    record(`${vp.name}: clipped ${edge} target does not join`, { endpoint: { x, y: outsideY }, tap: { x, y: insideY } });
+    await escape();
+    const grab = await page.evaluate(id => { const s = window.__hintQaScene, p = s.views.get(id).paper, c = s.boardCamera; c.preRender(); const point = c.matrixCombined.transformPoint(p.x + p.back.x - 20, p.y + p.back.y); return { x: point.x, y: point.y }; }, ids.source);
+    const beforeDrag = await state();
+    await drag(grab, { x: x - 20, y: insideY }, 1, async () => { const target = await page.evaluate(() => window.__hintQaScene.target ?? null); assert.equal(target, null, `${edge}: drag cannot match a clipped port`); });
+    const afterDrag = await state(); assert.deepEqual(afterDrag.chains.map(({ id, tiles, bonds }) => ({ id, tiles, bonds })), beforeDrag.chains.map(({ id, tiles, bonds }) => ({ id, tiles, bonds })), `${edge}: near-clipped-port drag must not join`);
+    record(`${vp.name}: clipped ${edge} target rejects real tap and drag matching`, { endpoint: { x, y: outsideY }, tap: { x, y: insideY } });
+  }
+};
+const visiblePortJoinChecks = async vp => {
+  for (const edge of ['top', 'bottom']) {
+    await open(detailed); const ids = await arrange(); const data = await layout(), y = edge === 'top' ? data.board.y + 22 : data.board.bottom - 22, sourceEndX = vp.width / 2 - 40, targetStartX = vp.width / 2 + 40;
+    await page.evaluate(({ source, target, sourceEndX, targetStartX, y }) => { const s = window.__hintQaScene, c = s.boardCamera; c.preRender(); for (const [id, endpoint, x] of [[source, 'back', sourceEndX], [target, 'front', targetStartX]]) { const p = s.views.get(id).paper, world = c.getWorldPoint(x, y); s.apply({ type: 'move', chain: id, point: { x: world.x - p[endpoint].x, y: world.y - p[endpoint].y } }); } }, { ...ids, sourceEndX, targetStartX, y });
+    const before = await state();
+    await drag({ x: sourceEndX - 20, y }, { x: targetStartX - 20, y }, 5, async () => { const target = await page.evaluate(() => window.__hintQaScene.target ? { id: window.__hintQaScene.target.id, side: window.__hintQaScene.target.side } : null); assert.deepEqual(target, { id: ids.target, side: 'before' }, `${edge}: visible source and target ports should match`); });
+    const joined = await state(); assert.equal(joined.chains.length, before.chains.length - 1, `${edge}: actual visible-port drop joins`); await piece(detailed.fragments[0] + detailed.fragments[1]);
+    await physicalAction('undo'); const undone = await state(); assert.deepEqual(undone.chains, before.chains, `${edge}: actual Undo restores join`);
+    record(`${vp.name}: real drag-join and Undo at visible ${edge} ports`, { sourceEndpoint: { x: sourceEndX, y }, targetEndpoint: { x: targetStartX, y } });
   }
 };
 const hintChecks = async (vp, zoom) => {
@@ -165,6 +181,16 @@ const hintChecks = async (vp, zoom) => {
   const beforeTarget = await state(); await physicalAction('hint-target'); const targetReached = await state(); sameHint(beforeTarget, targetReached, 'Explicit target navigation retains context'); assert.equal(targetReached.camera.zoom, beforeTarget.camera.zoom); assert.notDeepEqual(targetReached.probes, beforeTarget.probes, 'Explicit offscreen target navigation changes view'); await paperPoint(ids.target);
   const beforeSource = await state(); await physicalAction('hint-source'); sameHint(beforeSource, await state(), 'Explicit source navigation retains context'); await paperPoint(ids.source);
   record(`${vp.name}: reveal, repeated collapse/reopen, button/Escape cancellation, explicit source/target navigation at zoom ${zoom}`, { before: selecting.camera, expanded: shown.camera, after: (await state()).camera });
+};
+const rotationChecks = async vp => {
+  if (vp.width >= vp.height) return;
+  const before = await state(), source = before.chains.find(ch => ch.tiles.includes(before.hintAnchor)).id;
+  const retained = current => { for (const key of ['passageId', 'phase', 'hintAnchor', 'hintTarget', 'hintDescription', 'remaining']) assert.equal(current[key], before[key], `Rotation retains ${key}`); assert.deepEqual(current.chains, before.chains, 'Rotation retains live Session chains'); assert.deepEqual(current.tiles, before.tiles, 'Rotation retains exact text and tile identity'); assert(current.marks.some(p => p.commands.length), 'Rotation keeps hint marks'); };
+  await page.setViewportSize({ width: vp.height, height: vp.width }); await pause(250); retained(await state()); await assertLayout(true); assert.equal(await page.locator('canvas').count(), 1, 'One canvas after rotation'); const landscapeScreenshot = await shot(`current-${vp.name}-rotated-landscape-hint`);
+  await physicalAction('hint-source'); retained(await state()); await paperPoint(source);
+  await page.setViewportSize({ width: vp.width, height: vp.height }); await pause(250); retained(await state()); await assertLayout(true); assert.equal(await page.locator('canvas').count(), 1, 'One canvas after rotating back');
+  await physicalAction('hint-source'); await physicalAction('hint'); await mode('hint-select'); const beforeRetap = await state(); await tap(await paperPoint(source)); await mode('assembling'); const afterRetap = await state(); retained(afterRetap); sameView(beforeRetap, afterRetap, 'Actual post-rotation repeated reveal does not move board'); await assertLayout(true);
+  record(`${vp.name}: actual portrait→landscape→portrait resize retains Session/text/hints; real canvas re-tap remains usable`, { landscapeScreenshot, before: before.camera, after: afterRetap.camera });
 };
 const bottomHintChecks = async vp => {
   await open(detailed); const ids = await arrange(); const beforeLayout = await layout(), point = { x: vp.width / 2, y: beforeLayout.board.bottom - 20 };
@@ -215,6 +241,13 @@ const navigationChecks = async vp => {
   await page.locator('canvas').focus(); const keyBefore = await state(); await page.keyboard.press('-'); await pause(); const keyed = await state(); assert(keyed.camera.zoom < keyBefore.camera.zoom); sameHint(keyBefore, keyed, 'Keyboard zoom retains hint');
   record(`${vp.name}: real ${touch ? 'touch pan/pinch' : 'mouse pan/wheel'}, HUD-wheel rejection and keyboard zoom`, { initial: old.camera, pan: panned.camera, zoom: zoomed.camera, keyboard: keyed.camera });
 };
+const overlayChecks = async vp => {
+  await open(detailed); await physicalAction('settings'); await mode('settings'); const settings = await layout(); assert(settings.labels.some(label => label.text.includes(detailed.title) && label.text.includes(detailed.author)), 'Title and author remain available in settings');
+  for (const label of settings.labels) assert(label.x >= -.6 && label.y >= -.6 && label.right <= settings.width + .6 && label.bottom <= settings.height + .6, `Settings text overflow ${JSON.stringify(label)}`);
+  for (let i = 0; i < settings.actions.length; i++) for (let j = i + 1; j < settings.actions.length; j++) assert(!intersects(settings.actions[i], settings.actions[j]), `Settings actions overlap: ${settings.actions[i].id}/${settings.actions[j].id}`);
+  await physicalAction('help'); await mode('help'); const help = await layout(); for (const label of help.labels) assert(label.x >= -.6 && label.y >= -.6 && label.right <= help.width + .6 && label.bottom <= help.height + .6, `Help text overflow ${JSON.stringify(label)}`);
+  await physicalAction('close'); await mode('assembling'); await assertLayout(false); record(`${vp.name}: secondary title/author and settings-to-help remain available and fit`);
+};
 const reachAllPapers = async vp => {
   await open(longest); await stableDeal(longest);
   const seen = new Set(), total = (await pieces()).length;
@@ -252,11 +285,13 @@ try {
       if (rev === 'current') { sameView(before, after, 'Fresh comparison reveal preserves camera screen transform'); await assertLayout(true); }
       comparisons.push({ revision: rev, viewport: vp, passageId: detailed.id, ordinary, ordinaryShot, hint: hintLayout, hintShot, reveal: { before: before.camera, after: after.camera, beforeProbes: before.probes, afterProbes: after.probes } });
       if (rev === 'baseline') { await context.close(); continue; }
-      stage = `${vp.name}: pointer/render boundaries`; await pointerBoundaryChecks(vp); await clippedPortChecks(vp);
+      stage = `${vp.name}: pointer/render boundaries`; await pointerBoundaryChecks(vp); await clippedPortChecks(vp); await visiblePortJoinChecks(vp);
       for (const zoom of [0.65, 1.7, 1]) { stage = `${vp.name}: hint context zoom ${zoom}`; await hintChecks(vp, zoom); }
+      stage = `${vp.name}: orientation transition`; await rotationChecks(vp);
       stage = `${vp.name}: pan and zoom`; await navigationChecks(vp);
       stage = `${vp.name}: bottom-source adaptive reveal`; await bottomHintChecks(vp);
       stage = `${vp.name}: important status and full-chain hint controls`; await noticeChecks(vp);
+      stage = `${vp.name}: secondary settings and help`; await overlayChecks(vp);
       stage = `${vp.name}: all papers reachable`; await reachAllPapers(vp);
       stage = `${vp.name}: long completion`; await completeChecks(vp);
       await context.close();

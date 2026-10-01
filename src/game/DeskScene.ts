@@ -301,10 +301,10 @@ export class DeskScene extends Phaser.Scene {
     this.actions.get("overview")!.label = complete ? "原稿全体を表示" : "すべての紙片を表示";
     const y = this.h - 48;
     if (this.hintSelecting) this.label("紙片を選ぶ", 14, y + 13, 12, 0, "#647465");
-    else if (session.canUndo) this.button("undo", "元に戻す", 4, y, 80, 44, () => this.apply({ type: "undo" }));
+    else if (session.canUndo) this.button("undo", "元に戻す", 4, y, 76, 44, () => this.apply({ type: "undo" }));
     else this.button("help", "遊び方", 4, y, 80, 44, () => this.openOverlay("help"));
     if (complete) {
-      const sourceWidth = Math.min(152, this.w - 188);
+      const sourceWidth = Math.min(152, this.w - 196);
       this.button("source", "出典を読む ↗", (this.w - sourceWidth) / 2, y, sourceWidth, 44, () => window.open(problem.sourceUrl, "_blank", "noopener,noreferrer"), true);
       this.button("again", "次の問題", this.w - 94, y, 90, 44, () => { if (this.currentPassage) void this.openWork(this.currentPassage.workId); });
     } else {
