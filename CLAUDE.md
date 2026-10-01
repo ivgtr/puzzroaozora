@@ -14,7 +14,7 @@ This is a Next.js Pages Router host for a Phaser 4 manuscript reconstruction gam
 - Solve ambiguity through passage and chunk curation, not grammar engines, language-model judging, or approximate-answer acceptance. Layout, DPI, line breaks, and blank manuscript cells never change comparison text. Use graphemes for visual boundaries.
 - Do not silently replace source text, spellings, missing glyphs, unavailable APIs, or a failed renderer. Report the failure. Do not add scoring, answer-submit APIs, a parallel DOM game, or a generic engine abstraction.
 - Use built-in Node tests for a few invariants. Do not expand permanent CI with large seed sweeps, browsers, or source-network requests. Fonts come from pinned packages during predev/prebuild; do not commit font binaries.
-- Record only actually executed checks. Keep earlier screenshots/results labeled by iteration; they do not verify this redesign. Human legibility, play balance, and listening remain separate from automated checks.
+- Record only executed checks, briefly in the PR body. Do not accumulate screenshots, verification logs, or temporary QA workflows in the repository. Human legibility, play balance, and listening remain separate from automated checks.
 - Keep PR #6 in draft. No merge or production deployment is authorized by this redesign work.
 
 ## Commands
