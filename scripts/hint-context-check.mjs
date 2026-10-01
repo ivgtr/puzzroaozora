@@ -39,11 +39,11 @@ const checks = [], errors = [], requestFailures = [], scripts = [], screenshots 
 let page, browser, currentContext, stage = 'launch';
 const report = (status, failure) => ({
   status, startedAt, finishedAt: new Date().toISOString(), appUrl,
-  appHead: git('rev-parse', 'HEAD'), appFiles, gitStatus: git('status', '--short'), baseline,
+  appHead: git('rev-parse', 'HEAD'), appFiles, gitStatus: git('status', '--short'), baseline, browserVersion: browser?.version(),
   scripts, checks, solved, errors, requestFailures, screenshots, comparisons,
   ...(failure ? { failure: String(failure.stack || failure), stage } : {}),
   desktop: '1280x800 DPR2', mobile: '320x568 DPR2 touch, rotated to 568x320 and back',
-  method: 'Real canvas mouse/touch reveal and context-chip navigation. Shared accessible Session controls perform assembly and Undo. Temporary read-only script-response exposure provides camera/graphics evidence. Deterministic fixtures open a curated passage and move existing chains through the live Scene/Session; they never replace game state or render a substitute UI. Random boundary checks temporarily set Math.random only during the synchronous draw call, restoring it before passage initialization. All 12 passages are solved, independently of chance.',
+  method: 'Real canvas mouse/touch reveal and context-chip navigation. Shared accessible Session controls perform assembly and Undo. Temporary read-only script-response exposure provides camera/graphics evidence. Deterministic fixtures open a curated passage and move existing chains through the live Scene/Session; they never replace game state or render a substitute UI. Eight normal-RNG work openings per work check membership and immediate-repeat exclusion without overriding randomness; boundary values are covered by the separate Node questions tests. All 12 passages are solved, independently of chance.',
   limitations: 'Automated Chromium only; physical-device use, human legibility/balance, listening and source-text editorial review are not claimed. Baseline comparisons are captured only when BASELINE_URL is supplied. Fixture positions are shared by text, not random tile IDs.',
 });
 const record = (name, details = {}) => { checks.push({ name, ...details }); console.log(`PASS ${name}`); };
@@ -291,23 +291,25 @@ try {
     const passage = await openWork(index); record(`Real random work opening ${works[index].title}`, { passageId: passage.id });
     await physicalAction('library'); await mode('leave'); await physicalAction('confirm'); await mode('selection');
   }
-  stage = 'deterministic random boundaries and no-repeat';
+  stage = 'normal random draws and no-repeat';
+  const randomDraws = [];
   for (const work of works) {
     let previous;
-    for (const value of [0, .999999, .34, .67, 0]) {
-      const observed = await page.evaluate(async ({ workId, value }) => {
-        const scene = window.__hintQaScene, before = scene.lastPassageByWork.get(workId), originalRandom = Math.random;
-        let pending; Math.random = () => value;
-        try { pending = scene.openWork(workId); } finally { Math.random = originalRandom; }
-        await pending; return { previousId: before, passageId: scene.session.problem.id };
-      }, { workId: work.workId, value });
-      const choices = PASSAGES.filter(p => p.workId === work.workId && p.id !== observed.previousId);
-      assert.equal(observed.passageId, choices[Math.floor(value * choices.length)].id);
-      assert.notEqual(observed.passageId, observed.previousId); if (previous) assert.equal(observed.previousId, previous);
+    for (let draw = 0; draw < 8; draw++) {
+      const observed = await page.evaluate(async workId => {
+        const scene = window.__hintQaScene, before = scene.lastPassageByWork.get(workId);
+        await scene.openWork(workId);
+        return { previousId: before, passageId: scene.session?.problem.id, workId: scene.session?.problem.workId, notice: scene.notice };
+      }, work.workId);
+      assert.equal(observed.workId, work.workId, `Random opening failed: ${observed.notice}`);
+      assert(PASSAGES.some(p => p.workId === work.workId && p.id === observed.passageId), 'Random opening must use a curated question from the selected work');
+      assert.notEqual(observed.passageId, observed.previousId, 'Random opening excludes the immediately previous question');
+      if (previous) assert.equal(observed.previousId, previous);
       previous = observed.passageId;
+      randomDraws.push({ draw, ...observed });
     }
   }
-  record('Random draw maps low/high/interior values to four-per-work choices, excluding the last passage without changing shuffle randomness');
+  record('Eight normal-RNG draws per work stay within its four questions and never immediately repeat; no RNG overrides', { randomDraws });
 
   const detailed = PASSAGES.find(p => p.id === 'cat-palm-v3') || PASSAGES[0], texts = detailed.fragments;
   stage = 'hint budget regression'; await openPassage(detailed); const initial = await state();
