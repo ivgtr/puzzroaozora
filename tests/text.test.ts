@@ -7,9 +7,9 @@ import { dealManuscript, CELL, PAD, layoutManuscript } from "../src/game/layout.
 import { cleanAozora } from "../src/lib/aozora.ts";
 import { parseImportUrl } from "../src/lib/books.ts";
 
-test("twelve curated scenes preserve source text and provide atmosphere plus reasoning hints", () => {
-  assert.equal(PASSAGES.length, 12);
-  assert.equal(new Set(PASSAGES.map((passage) => passage.original)).size, 12);
+test("fifteen curated scenes preserve source text and provide atmosphere plus reasoning hints", () => {
+  assert.equal(PASSAGES.length, 15);
+  assert.equal(new Set(PASSAGES.map((passage) => passage.original)).size, 15);
   assert.equal(new Set(PASSAGES.map((passage) => passage.workId)).size, 3);
   for (const passage of PASSAGES) {
     assert.equal(passage.fragments.join(""), comparisonText(passage.original));

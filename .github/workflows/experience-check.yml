@@ -1,0 +1,49 @@
+# Temporary evidence workflow. Remove with scripts/passage-balance-check.mjs afterward.
+name: Passage balance verification (temporary)
+on:
+  pull_request:
+    branches: [codex/issue-1-manuscript-desk]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci --no-audit --no-fund
+      - run: npm test && npm run lint && npm run typecheck && npm run build
+      - name: Prepare isolated browser and production server
+        run: |
+          npm install --prefix /tmp/browser --no-audit --no-fund playwright@1.58.2
+          /tmp/browser/node_modules/.bin/playwright install --with-deps chromium
+          mkdir -p /tmp/evidence
+          npm start -- -H 127.0.0.1 -p 5678 > /tmp/server.log 2>&1 &
+          ready=0
+          for i in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:5678 >/dev/null; then ready=1; break; fi
+            sleep 1
+          done
+          test "$ready" = 1 || { cat /tmp/server.log; exit 1; }
+      - name: Fifteen solves and new excerpt desktop and touch checks
+        env:
+          APP_URL: http://127.0.0.1:5678
+          PLAYWRIGHT_MODULE: /tmp/browser/node_modules/playwright/index.mjs
+          EVIDENCE_DIR: /tmp/evidence
+        run: node --experimental-strip-types scripts/passage-balance-check.mjs
+      - name: Evidence and production server log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: passage-balance-verification
+          path: |
+            /tmp/evidence/
+            /tmp/server.log
+          retention-days: 7

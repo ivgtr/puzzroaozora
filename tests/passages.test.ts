@@ -62,15 +62,33 @@ const reviewedAdditions = [
     sourceUrl: "https://www.aozora.gr.jp/cards/000081/files/456_15050.html",
     original: "ジョバンニは、走ってその渚に行って、水に手をひたしました。けれどもあやしいその銀河の水は、水素よりももっとすきとおっていたのです。それでもたしかに流れていたことは、二人の手首の、水にひたったとこが、少し水銀いろに浮いたように見え、その手首にぶっつかってできた波は、うつくしい燐光をあげて、ちらちらと燃えるように見えたのでもわかりました。",
   },
+  {
+    id: "lemon-opening-v3",
+    pieces: 11,
+    sourceUrl: "https://www.aozora.gr.jp/cards/000074/files/424_19826.html",
+    original: "えたいの知れない不吉な塊が私の心を始終圧えつけていた。焦躁と言おうか、嫌悪と言おうか――酒を飲んだあとに宿酔があるように、酒を毎日飲んでいると宿酔に相当した時期がやって来る。それが来たのだ。これはちょっといけなかった。結果した肺尖カタルや神経衰弱がいけないのではない。また背を焼くような借金などがいけないのではない。いけないのはその不吉な塊だ。以前私を喜ばせたどんな美しい音楽も、どんな美しい詩の一節も辛抱がならなくなった。蓄音器を聴かせてもらいにわざわざ出かけて行っても、最初の二三小節で不意に立ち上がってしまいたくなる。何かが私を居堪らずさせるのだ。それで始終私は街から街を浮浪し続けていた。",
+  },
+  {
+    id: "lemon-street-v3",
+    pieces: 9,
+    sourceUrl: "https://www.aozora.gr.jp/cards/000074/files/424_19826.html",
+    original: "何故だかその頃私は見すぼらしくて美しいものに強くひきつけられたのを覚えている。風景にしても壊れかかった街だとか、その街にしてもよそよそしい表通りよりもどこか親しみのある、汚い洗濯物が干してあったりがらくたが転がしてあったりむさくるしい部屋が覗いていたりする裏通りが好きであった。雨や風が蝕んでやがて土に帰ってしまう、と言ったような趣きのある街で、土塀が崩れていたり家並が傾きかかっていたり――勢いのいいのは植物だけで、時とするとびっくりさせるような向日葵があったりカンナが咲いていたりする。",
+  },
+  {
+    id: "lemon-glass-v3",
+    pieces: 12,
+    sourceUrl: "https://www.aozora.gr.jp/cards/000074/files/424_19826.html",
+    original: "私はまたあの花火というやつが好きになった。花火そのものは第二段として、あの安っぽい絵具で赤や紫や黄や青や、さまざまの縞模様を持った花火の束、中山寺の星下り、花合戦、枯れすすき。それから鼠花火というのは一つずつ輪になっていて箱に詰めてある。そんなものが変に私の心を唆った。\n\n　それからまた、びいどろという色硝子で鯛や花を打ち出してあるおはじきが好きになったし、南京玉が好きになった。またそれを嘗めてみるのが私にとってなんともいえない享楽だったのだ。あのびいどろの味ほど幽かな涼しい味があるものか。私は幼い時よくそれを口に入れては父母に叱られたものだが、その幼時のあまい記憶が大きくなって落ち魄れた私に蘇えってくる故だろうか、まったくあの味には幽かな爽やかななんとなく詩美と言ったような味覚が漂って来る。",
+  },
 ] as const;
 
-test("each original work has four distinct curated passages with consistent attribution", () => {
-  assert.equal(PASSAGES.length, 12);
+test("all three works have distinct curated passages with consistent attribution", () => {
+  assert.equal(PASSAGES.length, 15);
   assert.equal(new Set(PASSAGES.map(({ id }) => id)).size, PASSAGES.length);
   assert.deepEqual([...new Set(PASSAGES.map(({ workId }) => workId))].sort(), ["000424", "000456", "000789"]);
   for (const workId of new Set(PASSAGES.map(({ workId }) => workId))) {
     const passages = PASSAGES.filter((passage) => passage.workId === workId);
-    assert.equal(passages.length, 4, workId);
+    assert.equal(passages.length, workId === "000424" ? 7 : 4, workId);
     for (const first of passages) for (const second of passages) {
       if (first.id === second.id) continue;
       assert.equal(first.title, second.title);
@@ -108,4 +126,10 @@ test("curated boundaries keep freely swappable descriptions and sentence transit
   assert.ok(fragments("lemon-castle-v3").includes("手当たり次第に積みあげ、また慌しく潰し、また慌しく築きあげた。新しく"));
   assert.ok(fragments("lemon-castle-v3").includes("そのたびに赤くなったり青くなったりした。やっとそれは"));
   assert.ok(fragments("galaxy-water-v3").includes("水に手をひたしました。けれどもあやしいその銀河の水は、"));
+  assert.ok(fragments("lemon-opening-v3").includes("肺尖カタルや神経衰弱がいけないのではない。また背を焼くような借金などが"));
+  assert.ok(fragments("lemon-opening-v3").includes("どんな美しい音楽も、どんな美しい詩の一節も"));
+  assert.ok(fragments("lemon-street-v3").includes("何故だかその頃私は見すぼらしくて美しいものに"));
+  assert.ok(fragments("lemon-street-v3").includes("土塀が崩れていたり家並が傾きかかっていたり――勢いのいいのは植物だけで、"));
+  assert.ok(fragments("lemon-glass-v3").includes("箱に詰めてある。そんなものが変に私の心を唆った。それからまた、"));
+  assert.ok(fragments("lemon-glass-v3").includes("父母に叱られたものだが、その幼時のあまい記憶が"));
 });
