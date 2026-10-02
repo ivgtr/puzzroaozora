@@ -1,0 +1,5 @@
+# Continuous narration masters are served from immutable GitHub asset URLs.
+# Never copy these into public/ or import their bytes into the application.
+audio-assets/**
+scripts/generate-narration.py
+scripts/align-narration.py

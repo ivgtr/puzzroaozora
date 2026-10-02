@@ -1,0 +1,127 @@
+{
+  "version": 1,
+  "model": "Aratako/Irodori-TTS-v4.1-Small",
+  "modelRevision": "2b28324dc263ed5e6638b3cf3dd94c82ead07b4b",
+  "codeRevision": "89f9d8fbd4d51ea019867ee1197725ede1df13c5",
+  "codec": "Aratako/Semantic-DACVAE-Japanese-32dim",
+  "codecRevision": "47376ee24834d7a05a48ebabfe3cde29b3c5e214",
+  "precision": "CPU FP32",
+  "runtime": {
+    "python": "3.10.21",
+    "pytorch": "2.10.0+cpu",
+    "torchaudio": "2.10.0+cpu",
+    "transformers": "5.12.1",
+    "threads": 8,
+    "interopThreads": 1
+  },
+  "sampleRate": 48000,
+  "encoding": "mono PCM16 WAV",
+  "watermark": {
+    "enabled": true,
+    "model": "sony/silentcipher",
+    "revision": "a1c4d021905e0dc5b24be5f68db5fc4dba410ee1",
+    "packageVersion": "1.0.5",
+    "payload": [
+      73,
+      82,
+      68,
+      84,
+      83
+    ]
+  },
+  "voices": {
+    "female": {
+      "seed": 20261002,
+      "caption": "落ち着いた大人の女性。自然で柔らかい声で、小説を静かに朗読している。",
+      "syntheticReference": "masters/lemon-opening-v4-female.wav",
+      "referenceSha256": "dd833a9a6eb559ff19a05467e09e1653ae966be1286d39c9331a24ae79c5220a"
+    },
+    "male": {
+      "seed": 20261003,
+      "caption": "落ち着いた大人の男性。自然で深みのある声で、小説を静かに朗読している。",
+      "syntheticReference": "masters/lemon-opening-v4-male.wav",
+      "referenceSha256": "5fb0a3050933fcdf783e9f5a97dbf2bdd3075ebb0d13612ccb91dc199b56fdb1"
+    }
+  },
+  "sampling": {
+    "ref_wavs": null,
+    "ref_latent": null,
+    "ref_latents": null,
+    "ref_embed": null,
+    "ref_normalize_db": -16.0,
+    "ref_ensure_max": true,
+    "num_candidates": 1,
+    "decode_mode": "sequential",
+    "seconds": null,
+    "duration_scale": 1.0,
+    "min_seconds": 0.5,
+    "max_seconds": 30.0,
+    "max_ref_seconds": null,
+    "max_text_len": null,
+    "max_caption_len": null,
+    "num_steps": 40,
+    "cfg_scale_text": 3.0,
+    "cfg_scale_caption": 3.0,
+    "cfg_guidance_mode": "independent",
+    "cfg_scale": null,
+    "cfg_min_t": 0.5,
+    "cfg_max_t": 1.0,
+    "truncation_factor": null,
+    "rescale_k": null,
+    "rescale_sigma": null,
+    "context_kv_cache": true,
+    "speaker_kv_scale": null,
+    "speaker_kv_min_t": null,
+    "speaker_kv_max_layers": null,
+    "speaker_uncond_mode": "mask",
+    "t_schedule_mode": "linear",
+    "sway_coeff": -1.0,
+    "trim_tail": true,
+    "tail_window_size": 20,
+    "tail_std_threshold": 0.05,
+    "tail_mean_threshold": 0.1,
+    "lora_adapter": null
+  },
+  "modes": {
+    "seed": {
+      "no_ref": true,
+      "cfg_scale_speaker": 0.0
+    },
+    "reference": {
+      "no_ref": false,
+      "cfg_scale_speaker": 5.0
+    }
+  },
+  "clips": {
+    "lemon-opening-v4/female": {"file":"masters/lemon-opening-v4-female.wav","sha256":"dd833a9a6eb559ff19a05467e09e1653ae966be1286d39c9331a24ae79c5220a","duration":20.32,"seed":20261002,"inputFingerprint":"febb794fe02ce1bdb508a0c79d7626c1637df47449c80d7d57c4421a71fba2bc","mode":"seed","gain":1.0,"watermarkVerified":true},
+    "lemon-opening-v4/male": {"file":"masters/lemon-opening-v4-male.wav","sha256":"5fb0a3050933fcdf783e9f5a97dbf2bdd3075ebb0d13612ccb91dc199b56fdb1","duration":19.56,"seed":20261003,"inputFingerprint":"c45a873553b0840d674e2600aaf0fe0901baebc3c8d91826af4050ef3acc2c71","mode":"seed","gain":0.9505144280795432,"watermarkVerified":true},
+    "cat-palm-v4/female": {"file":"masters/cat-palm-v4-female.wav","sha256":"1222d270d4dec815198f41abd9ed73fe76382a4080ea5952c2e159936f1f2791","duration":18.6,"seed":22861786,"inputFingerprint":"924e558512c4dee8700eed21544b02c1837f09738a0513717cac2425879e4443","mode":"reference","gain":1.0,"watermarkVerified":true},
+    "cat-palm-v4/male": {"file":"masters/cat-palm-v4-male.wav","sha256":"8888fefa11d61a4743c2b7c81d9741bab986d001216e26d5a25d84083ed7a876","duration":18.32,"seed":26306003,"inputFingerprint":"91e226eab3d6c145286b86df8a3e002fe60ca16c7b2437bb9e1b3b77845fdf4c","mode":"reference","gain":0.9757364999597176,"watermarkVerified":true},
+    "cat-pond-v4/female": {"file":"masters/cat-pond-v4-female.wav","sha256":"f58b19c996a930dd715655ba19fe0d3674a4f13cea01377c165644c2502a16d9","duration":21.48,"seed":25914479,"inputFingerprint":"377c2c83a4aaae2d541b994d426f2d9d9f188dd7843a54238084bb6129cabc5e","mode":"reference","gain":0.987810633893421,"watermarkVerified":true},
+    "cat-pond-v4/male": {"file":"masters/cat-pond-v4-male.wav","sha256":"a14e97d917c0e26d6515ff9839d20b068b76aa1da6002ede17e77a95a9e31980","duration":20.56,"seed":32929507,"inputFingerprint":"adfaed0b86dc9e96b39b572647d08642b1bdf197f5c0c3af92bfc5a3bcea2f77","mode":"reference","gain":0.9460648898913753,"watermarkVerified":true},
+    "cat-home-v4/female": {"file":"masters/cat-home-v4-female.wav","sha256":"7be44d3f5ce31f594a52a4ba5ce9d7514c7596a8d85ff0158309e05fe4ad5198","duration":17.32,"seed":27761601,"inputFingerprint":"8aa283148dbb120963d22157b47e2a04f5b420f7f046b381bfae15b33e4034df","mode":"reference","gain":1.0,"watermarkVerified":true},
+    "cat-home-v4/male": {"file":"masters/cat-home-v4-male.wav","sha256":"3f0fbee29039d1ccf9aa7ee58d511c4fea0b4caa93a30be060edaac226bea7b5","duration":16.88,"seed":25377174,"inputFingerprint":"0c92327f8d46232bc5eb1f623950125f5705463621d3d482e9dadd076f66e4da","mode":"reference","gain":0.947673127245679,"watermarkVerified":true},
+    "cat-study-v4/female": {"file":"masters/cat-study-v4-female.wav","sha256":"114ba8cc6f5147e9ff6e9dafbda18e599767502d8bd46b78540ca9f4021122c9","duration":16.68,"seed":25677938,"inputFingerprint":"de385ef3c624c1732641d15af897ce5fce144cc849737621dc9a5a40ef7a423b","mode":"reference","gain":0.9941371788914288,"watermarkVerified":true},
+    "cat-study-v4/male": {"file":"masters/cat-study-v4-male.wav","sha256":"c34f5fdc742707568c6c02f1d39af631a3f0e92f98dddf6f8da6ad1b50e426f5","duration":16.72,"seed":27702849,"inputFingerprint":"3cb06f571f08da57bd1b5001caf91012de8ef6836ec7f925bb39ee981b8a52e5","mode":"reference","gain":0.948060391849884,"watermarkVerified":true},
+    "lemon-shop-v4/female": {"file":"masters/lemon-shop-v4-female.wav","sha256":"c8c0a4c203a0e277d9cd46b3d4a9cc53c00ec93e77c91b0f57fadfa6d56625a2","duration":18.76,"seed":31517530,"inputFingerprint":"712c6736a954d1f140764e0a6a50d2fc4e8c0ab3da5af3d49cad9ed782afac84","mode":"reference","gain":1.0,"watermarkVerified":true},
+    "lemon-shop-v4/male": {"file":"masters/lemon-shop-v4-male.wav","sha256":"c10c97322b527136e678f91dc7730588998ca8ddf329bdd3ba28d230fc767ba7","duration":17.92,"seed":31049359,"inputFingerprint":"1f6145f59c440f6224e64ab0afb25a5124685712cc7a9d534fc6b9aa9c1d30e1","mode":"reference","gain":0.9622043587646725,"watermarkVerified":true},
+    "lemon-coolness-v4/female": {"file":"masters/lemon-coolness-v4-female.wav","sha256":"388e9ea94e5b3b4d7c641e3d67537ed83d46691b0dd75ea9936cd64b34aae373","duration":21.56,"seed":28996106,"inputFingerprint":"1d195624cc3f9fb7540115b0da1e6a19e912245e62eb56d33069feb4bdf42a56","mode":"reference","gain":0.9683038056261827,"watermarkVerified":true},
+    "lemon-coolness-v4/male": {"file":"masters/lemon-coolness-v4-male.wav","sha256":"0f77e205e85d08b5d5cf78b49e77348e80a72f167f405c1af97b5cd5544c3be4","duration":21.32,"seed":26977475,"inputFingerprint":"1070af6693b70d010df530c96f156a228e1d9df5e0eb8fb1d3b98c914db12de5","mode":"reference","gain":0.9531886553820766,"watermarkVerified":true},
+    "lemon-fragrance-v4/female": {"file":"masters/lemon-fragrance-v4-female.wav","sha256":"4885b0c7f44c25116220b8c77eb85a31ec4bb5c49d008b29914091187ec750c8","duration":20.6,"seed":34741878,"inputFingerprint":"f63576a7a27ed140f3b25baf0e4e07f8fb7f32f24786bbeaf42339ecf6b64ada","mode":"reference","gain":1.0,"watermarkVerified":true},
+    "lemon-fragrance-v4/male": {"file":"masters/lemon-fragrance-v4-male.wav","sha256":"317a8b70ca45e37086198ae37b05056b4b18b0104170388a3cd5e2dda19b981b","duration":20.4,"seed":34225613,"inputFingerprint":"306cf4c2a656bff5d8b568389d7bf20984844bd5712436f4707fec6fe196f207","mode":"reference","gain":0.9479808837830362,"watermarkVerified":true},
+    "lemon-street-v4/female": {"file":"masters/lemon-street-v4-female.wav","sha256":"b6ec9aa234984fccf03cd05e29ce1cab75a78dd3a12d52d78ac4524f2c4f94c1","duration":20.88,"seed":25267474,"inputFingerprint":"a9cbb764a60fcae0f131a2eddfd55c75b773341a8b4757f4446ea4ba79368854","mode":"reference","gain":0.9491948044028127,"watermarkVerified":true},
+    "lemon-street-v4/male": {"file":"masters/lemon-street-v4-male.wav","sha256":"5dc5a23b82aeb5aa64b62ca3514cfd1c8e53e46c5e6fd2c824ef116d0bf7a47e","duration":20.76,"seed":35386856,"inputFingerprint":"4d0e8a468f30a00761bd9baecfe859959d6f8e2dc3b68d165e4e72acf155c791","mode":"reference","gain":0.9477462717736552,"watermarkVerified":true},
+    "lemon-castle-v4/female": {"file":"masters/lemon-castle-v4-female.wav","sha256":"71e183a2802216750f8e5674324fbd1c9313763117df67adae880cfcdacd7d2f","duration":20.28,"seed":29340831,"inputFingerprint":"ae39ded87eb6696b4beb9f06412e3b922cf21df5c9fc4b9465001c701787fbb4","mode":"reference","gain":0.9579529570113015,"watermarkVerified":true},
+    "lemon-castle-v4/male": {"file":"masters/lemon-castle-v4-male.wav","sha256":"7e1f517b98dc4b4bc60c14df057bdf91fcbc2cfd87f0c249ef6d6146c10c1b37","duration":19.68,"seed":31836886,"inputFingerprint":"caeceb3a723fa36715c070e340ebbfb82f3fae66d204011e1dbe16e12425b4ce","mode":"reference","gain":0.9465884437062061,"watermarkVerified":true},
+    "lemon-glass-v4/female": {"file":"masters/lemon-glass-v4-female.wav","sha256":"9cfe29de7da0c6dc9d4bbf899ab6bd868f29588c07c6868edb97e47df57de02e","duration":26.2,"seed":27202963,"inputFingerprint":"94e6efa471ab6059fa4d75f1e50f55cedda9cd520a0a583058bfa43d80f4553c","mode":"reference","gain":0.962422589145289,"watermarkVerified":true},
+    "lemon-glass-v4/male": {"file":"masters/lemon-glass-v4-male.wav","sha256":"e54af42c3b563f6a4f50da7b34f45e850d0b87dd6ad7eb4ec43b6fd1fe052499","duration":25.72,"seed":36460423,"inputFingerprint":"c8ea54b919a50ad198a15c817d0805917478e00c2e150fd545518774a474817b","mode":"reference","gain":0.9473184969770051,"watermarkVerified":true},
+    "galaxy-wages-v4/female": {"file":"masters/galaxy-wages-v4-female.wav","sha256":"ede3b38eba9c9595dbb60c6d5e5f406f51a4ec94fb9d7f0c4bc7e04261bb945a","duration":21.52,"seed":21538765,"inputFingerprint":"366b30ee37440e3e1df70188894c6c86786277f1f166a199825bbcc16e59d53f","mode":"reference","gain":0.9529768712442019,"watermarkVerified":true},
+    "galaxy-wages-v4/male": {"file":"masters/galaxy-wages-v4-male.wav","sha256":"9aad90b49cfb35cfb8f279f06ca4d5d1970050e9411a657f665ccb1f09ea6fff","duration":21.2,"seed":34118114,"inputFingerprint":"dfa519d4cc31d8cf7d8dddcd8dd8c197a55ba7bd15932b7f8b6258781aa032cb","mode":"reference","gain":0.9478641833313312,"watermarkVerified":true},
+    "galaxy-path-v4/female": {"file":"masters/galaxy-path-v4-female.wav","sha256":"28356a25b94dd295e287dbc8ce4d54de46b70977c3eeffb41765a0c1d0b97197","duration":19.36,"seed":36761883,"inputFingerprint":"18cc51a911ebbbf090fbf3115ba0c1b521a207819d326aa51887830a2eb6b6b5","mode":"reference","gain":0.9985475210128547,"watermarkVerified":true},
+    "galaxy-path-v4/male": {"file":"masters/galaxy-path-v4-male.wav","sha256":"175379bec1bea74be30841679ef36cd901aec744ce6e0be02566726dc7d75dcc","duration":18.2,"seed":29058125,"inputFingerprint":"0f4f1dff64b9125315ff7af0877dd878f1728cd83ec8cf90613e700ab1ec9565","mode":"reference","gain":0.9494678023330485,"watermarkVerified":true},
+    "galaxy-platform-v4/female": {"file":"masters/galaxy-platform-v4-female.wav","sha256":"ab5961284b964e73756c42f78ea06ae52d9654e9b8f1c3e1c29f9a33066088ef","duration":14.96,"seed":35277104,"inputFingerprint":"2a5d5b9459ef478c12bde4e9f349df7380b72c352bf2e01e0198a2304cf5f6e0","mode":"reference","gain":1.0,"watermarkVerified":true},
+    "galaxy-platform-v4/male": {"file":"masters/galaxy-platform-v4-male.wav","sha256":"310ce722f4541402a978cce1a991cf668fa6be502aff50551242e222f818ccd3","duration":14.72,"seed":25706021,"inputFingerprint":"0ed785e7040dd88e5150e37cb37dc064c11cf5c1af1fb775c2bfbc35748398fd","mode":"reference","gain":0.9529613729799797,"watermarkVerified":true},
+    "galaxy-water-v4/female": {"file":"masters/galaxy-water-v4-female.wav","sha256":"01fafc862be08489baefaff0abadf06d91f60fae44f96b70b9f0c6ba49353022","duration":12.44,"seed":26088125,"inputFingerprint":"7a25d40e235a0aed615ed82fdf1bd2642827c29008468320e335bbcf32eff352","mode":"reference","gain":0.9972631374508074,"watermarkVerified":true},
+    "galaxy-water-v4/male": {"file":"masters/galaxy-water-v4-male.wav","sha256":"370a15fd2cbcb48ec13503d367585926392b11470f94b6cd4b5c2e08b81c2fb2","duration":12.24,"seed":36314803,"inputFingerprint":"5dd98708dd9e7294b58e7072e3dfdee409d346eea2112e9af3286d5599990472","mode":"reference","gain":0.9487235910357916,"watermarkVerified":true}
+  }
+}
