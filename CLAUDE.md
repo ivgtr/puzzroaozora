@@ -14,11 +14,12 @@ Next.js Pages Router hosts a Phaser 4 manuscript reconstruction game. Read READM
 - Use continuous pre-generated Irodori male/female masters. Original text and speech reading are separate. Cues come from known-text alignment and waveform review, never proportional character timestamps. Stop risky unverified cuts with a disclosed visual fallback; do not call uncertain audio boundaries verified
 - Keep audio in audio-assets/, outside public/ and imports. `.vercelignore` excludes it. Runtime has one centralized immutable raw GitHub base URL. Preserve watermark and license/ethical notices. Never commit models, caches or generated font binaries
 - Selection is one paper invitation on the desk, controls are plain and compact, and the paper play area remains primary. No dashboard/bookshelf, fake decorative books or generic scoring layer
-- Existing IndexedDB records stay untouched and read-only. Imports/reimports remain paused. Never migrate, overwrite, decrypt, silently substitute or route archived data into current play
+- Arbitrary work imports/reimports and saved-book UI/API are retired. Do not access existing IndexedDB records. Never delete, migrate, overwrite, decrypt, silently substitute or route archived data into current play. Developers may expand the curated catalog with verified text, authored fragments and narration
 - Solve content ambiguity editorially; exact original order is the goal, not judging alternative Japanese as incorrect. Layout/DPI/graphemes never change comparison text. No language-model answer judging, approximate acceptance, answer-submit APIs, or parallel DOM game
+- Use the configured Webpack source build of Phaser for both development and production. Keep the unused GPL-origin requestVideoFrame video polyfill excluded; do not switch back to the prebuilt Phaser bundle without reviewing its notices
 - Node built-in tests, typecheck, lint, build and representative play are enough. Do not add permanent browser/seed-sweep CI or network-source tests. Keep executed checks brief in the draft PR; no accumulated screenshots/logs/workflows
 - Implementation and draft PR are authorized; merging or deploying main is not
 
 ## Commands
 
-Node 22; `npm ci`, `npm test`, `npm run lint`, `npm run typecheck`, `npm run build`. Development serves port 5678. `AOZORA_API_BASE_URL` does not enable the paused import flow.
+Node 22; `npm ci`, `npm test`, `npm run lint`, `npm run typecheck`, `npm run build`. Development serves port 5678. There is no work-import API or import environment configuration.

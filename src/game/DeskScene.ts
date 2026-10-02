@@ -7,7 +7,6 @@ import { hintExcerpt, revealOffset } from "./hint-context.ts";
 import { deskViewport, insideBoard, constrainPointer } from "./viewport.ts";
 import { primaryPress, TouchTaps } from "./gestures.ts";
 
-import { readBooks, type LibraryBook } from "../lib/books.ts";
 import { detachedChains, type Chain, type Command, type Point, type CuratedPassage } from "./model.ts";
 import { comparisonText, graphemes, type Difficulty } from "./text.ts";
 import { CELL, dealManuscript, detachedPositions, layoutManuscript } from "./layout.ts";
@@ -18,9 +17,10 @@ import type { DeskSnapshot, HostBridge } from "./bridge.ts";
 
 const WORKS = PASSAGES.filter((passage, index) => PASSAGES.findIndex((other) => other.workId === passage.workId) === index);
 
-export const UI_TEXT = Object.values(NARRATION_MESSAGES).join("") + `再試行 朗読を再試行 ライフ 片 別のタブで挑戦が更新されました。ここから再開できます。別のタブの更新を読み込めません。このタブを読み直してください。 前の結果を見る 原文の順序をどこまで思い出せるか 挑戦全体 細かめ ふつう 中断した挑戦を再開 挑戦を中断・終了する 今回の結果へ戻る ライフ 読み通しています 確認済みを早送り ここで途切れました ここから先は未判定です 読み通せました 前の抜粋を読み返す 次の抜粋を読み返す 停止 聴く この作品を読み通しました ここまで読み通せました 問クリア 今回の挑戦 続きを聴く 読み返す もう一度挑む 朗読の声 女性 男性 紙片の細かさ 合成音声 Irodori-TTS v4.1 Small 新しい挑戦を始めますか 中断した挑戦は終了します 新しい挑戦は3ライフ・ヒント1回で始まります 中断しても盤面・ライフ・ヒントはこの端末に残ります 原文と出典は挑戦を終えた後に読めます 中断して戻る 挑戦を終える 新しく始める すべての紙片を一つにつないでください 片目で途切れました 離れた塊の中は未判定です この端末では設定を保存できません 設定を読み込めません 挑戦を保存できません この画面を閉じると再開できない場合があります 保存した挑戦を読み込めません 新しい挑戦を始められます 青空文庫の原文 誤答でライフが1減ります 原文の順序を復元しましょう  隠す ヒントを隠す。紙片の印は残ります ヒントを見る。選んだ紙片と続き ヒントを隠す ヒントを見る 通知を閉じる 紙片を選ぶ ヒントを閉じても印は残ります。 PCは右クリック、スマホはダブルタップで紙片を外します。 選んだ紙片を見る 続きを見る 緑の下線が選んだ紙片、黄色が続きです。画面下の一節を押すとその場所へ移動できます。 ヒント 残り 回 取消 次の問題 ランダム出題 読む手掛かり 続きを知りたい紙片を選ぶ。塊は末尾が対象です。 色のついた部分が続きです。自動ではつなぎません。 前に見たヒントです。 続きを表示できません。別の紙片を選んでください。 残り0回です。前に見た紙片は再表示できます。 ヒントは挑戦全体で1回。取消・再表示は減りません。 誤答でライフが1減ります。原文の順序を復元しましょう。 同じ作品の別の抜粋をランダムに出題します。 問からランダムに出題 ヒントで続きを表示した紙片だけ色がつきます。 作品を選ぶ 作品選択に戻る パズルを続ける パズルを始める すべての紙片を表示 原稿全体を表示 音量を下げる 音量を上げる 消音を解除 消音にする 紙片をひろげる 遊び方 読了 枚の紙片 ↗ 青空パズル つなぐ 手掛かり 読み通す 別の情景 同じ情景 もう一度 つながりを見直す 原文 出典を読む 全体表示 元に戻す 遊び方 設定 閉じる 保存した本 作品の取り込みは休止しています。保存データはそのまま残っています。新しいルールでは、手で選び直した3作品の抜粋で遊べます。 作品選択に戻りますか 途中の配置は保存されません。 続ける 選び直す 一枚の原稿になりました。 紙片を選び、相手の端へ 余白を動かすと、ほかの紙片が見つかります 左端が前、右端が後。選んだ紙片をつなぎます。 右クリック・ダブルタップで紙片を外せます。 つながりを作りました。 つながりを外しました。 一つ前の操作に戻しました。 原文とは、まだ少し違うようです。紙片を外して読み直してみましょう。 ひとつにつながりました。読み通して確かめましょう。 音量 小 大 音なし 動きを控える 有効 無効 このブラウザでは音を利用できません。 紙片をドラッグして、相手の端へ。 紙片を選んでから相手の端をタップしてもつながります。 正誤は最後に読み通すまで分かりません。 外したい紙片を、PCは右クリック、スマホはダブルタップ。 余白をドラッグして移動。二本指・ホイールで拡大縮小。 矢印で移動、Enterで選択、[ と ]で前後へ。 Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。 次の手掛かり 前へ 次へ 準備中です。 読み込めませんでした。 読み込みを完了できませんでした。 段落の順序を確かめる 紙片 残り 組 つながり 確認 正解の場所は示しません まだ保存した本はありません。 記録 この三問は手作業で選んだ抜粋です。 答えは、つなぎ終えたあとに。 選択した紙片を前につなぐ 選択した紙片を後につなぐ 番目の切れ目を外す 01 02 03 / · ← → ＋ − × … ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789[]()%「」、。`;
+const PREPARATION_ERROR = "原稿の書体を読み込めませんでした。接続を確認して再試行してください。進み具合は変わりません。";
+export const UI_TEXT = PREPARATION_ERROR + Object.values(NARRATION_MESSAGES).join("") + `原稿の準備 書体を再試行 ライセンス 再試行 朗読を再試行 ライフ 片 別のタブで挑戦が更新されました。ここから再開できます。別のタブの更新を読み込めません。このタブを読み直してください。 前の結果を見る 原文の順序をどこまで思い出せるか 挑戦全体 細かめ ふつう 中断した挑戦を再開 挑戦を中断・終了する 今回の結果へ戻る ライフ 読み通しています 確認済みを早送り ここで途切れました ここから先は未判定です 読み通せました 前の抜粋を読み返す 次の抜粋を読み返す 停止 聴く この作品を読み通しました ここまで読み通せました 問クリア 今回の挑戦 続きを聴く 読み返す もう一度挑む 朗読の声 女性 男性 紙片の細かさ 合成音声 Irodori-TTS v4.1 Small 新しい挑戦を始めますか 中断した挑戦は終了します 新しい挑戦は3ライフ・ヒント1回で始まります 中断しても盤面・ライフ・ヒントはこの端末に残ります 原文と出典は挑戦を終えた後に読めます 中断して戻る 挑戦を終える 新しく始める すべての紙片を一つにつないでください 片目で途切れました 離れた塊の中は未判定です この端末では設定を保存できません 設定を読み込めません 挑戦を保存できません この画面を閉じると再開できない場合があります 保存した挑戦を読み込めません 新しい挑戦を始められます 青空文庫の原文 誤答でライフが1減ります 原文の順序を復元しましょう  隠す ヒントを隠す。紙片の印は残ります ヒントを見る。選んだ紙片と続き ヒントを隠す ヒントを見る 通知を閉じる 紙片を選ぶ ヒントを閉じても印は残ります。 PCは右クリック、スマホはダブルタップで紙片を外します。 選んだ紙片を見る 続きを見る 緑の下線が選んだ紙片、黄色が続きです。画面下の一節を押すとその場所へ移動できます。 ヒント 残り 回 取消 次の問題 ランダム出題 読む手掛かり 続きを知りたい紙片を選ぶ。塊は末尾が対象です。 色のついた部分が続きです。自動ではつなぎません。 前に見たヒントです。 続きを表示できません。別の紙片を選んでください。 残り0回です。前に見た紙片は再表示できます。 ヒントは挑戦全体で1回。取消・再表示は減りません。 誤答でライフが1減ります。原文の順序を復元しましょう。 同じ作品の別の抜粋をランダムに出題します。 問からランダムに出題 ヒントで続きを表示した紙片だけ色がつきます。 作品を選ぶ 作品選択に戻る パズルを続ける パズルを始める すべての紙片を表示 原稿全体を表示 音量を下げる 音量を上げる 消音を解除 消音にする 紙片をひろげる 遊び方 読了 枚の紙片 ↗ 青空パズル つなぐ 手掛かり 読み通す 別の情景 同じ情景 もう一度 つながりを見直す 原文 出典を読む 全体表示 元に戻す 遊び方 設定 閉じる 作品選択に戻りますか 途中の配置は保存されません。 続ける 選び直す 一枚の原稿になりました。 紙片を選び、相手の端へ 余白を動かすと、ほかの紙片が見つかります 左端が前、右端が後。選んだ紙片をつなぎます。 右クリック・ダブルタップで紙片を外せます。 つながりを作りました。 つながりを外しました。 一つ前の操作に戻しました。 原文とは、まだ少し違うようです。紙片を外して読み直してみましょう。 ひとつにつながりました。読み通して確かめましょう。 音量 小 大 音なし 動きを控える 有効 無効 このブラウザでは音を利用できません。 紙片をドラッグして、相手の端へ。 紙片を選んでから相手の端をタップしてもつながります。 正誤は最後に読み通すまで分かりません。 外したい紙片を、PCは右クリック、スマホはダブルタップ。 余白をドラッグして移動。二本指・ホイールで拡大縮小。 矢印で移動、Enterで選択、[ と ]で前後へ。 Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。 次の手掛かり 前へ 次へ 準備中です。 読み込めませんでした。 読み込みを完了できませんでした。 段落の順序を確かめる 紙片 残り 組 つながり 確認 正解の場所は示しません 記録 この三問は手作業で選んだ抜粋です。 答えは、つなぎ終えたあとに。 選択した紙片を前につなぐ 選択した紙片を後につなぐ 番目の切れ目を外す 01 02 03 / · ← → ＋ − × … ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789[]()%「」、。`;
 
-type Overlay = "settings" | "leave" | "replace" | "books" | "help" | "hint";
+type Overlay = "settings" | "leave" | "replace" | "prepare" | "help" | "hint";
 const SAVE_KEY = "aozora-puzzle-run-v1";
 const SETTINGS_KEY = "aozora-puzzle-settings-v1";
 type View = { paper: Paper; signature: string };
@@ -80,10 +80,9 @@ export class DeskScene extends Phaser.Scene {
   private pinch?: { distance: number; zoom: number; world: Point };
   private suppressRelease = false;
   private overlay?: Overlay;
-  private reviewPage = 0;
   private libraryPage = 0;
   private hintIndex = 0;
-  private saved: LibraryBook[] = [];
+  private retryPreparation?: () => Promise<void>;
   private busy = false;
   private notice = "";
   private reportedError = "";
@@ -144,7 +143,6 @@ export class DeskScene extends Phaser.Scene {
     this.game.canvas.addEventListener("contextmenu", this.onContextMenu);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.shutdown, this);
     this.resize();
-    void this.loadBooks();
     this.onReady();
   }
 
@@ -231,7 +229,7 @@ export class DeskScene extends Phaser.Scene {
   }
 
   dispatch(id: string): void {
-    if (this.busy || !this.alive) return;
+    if (!this.alive || (this.busy && !(this.overlay === "prepare" && id === "close"))) return;
     this.touchTaps.cancel();
     if (id.startsWith("piece:")) {
       if (!this.canEdit || this.overlay) return;
@@ -340,7 +338,7 @@ export class DeskScene extends Phaser.Scene {
     });
     if (this.run) {
       this.button("resume", `${this.run.status === "ended" && !this.run.pending ? "前の結果を見る" : "中断した挑戦を再開"} · ${this.run.clears}/${this.run.total}問`, Math.max(12, this.w / 2 - 145), 54, 290, 44, () => { void this.resumeRun(); }, true);
-    } else if (this.saved.length) this.button("books", "保存した本", 14, this.h - 46, 104, 44, () => this.openOverlay("books"));
+    }
     if (this.notice) this.label(this.notice, 28, this.h - 30, 12, this.w - 56, "#735746");
   }
 
@@ -449,7 +447,14 @@ export class DeskScene extends Phaser.Scene {
     const x = (this.w - width) / 2, y = (this.h - height) / 2;
     this.panel(x, y, width, height);
     const bottom = y + height - 64;
-    if (this.overlay === "settings") {
+    if (this.overlay === "prepare") {
+      this.label("原稿の準備", x + 24, y + 28, 23, width - 48, "#354b40", true);
+      this.label(this.notice, x + 24, y + 88, 14, width - 48);
+      if (!this.busy) {
+        this.button("retry-preparation", "再試行", x + 20, bottom, 100, 44, () => { void this.retryPreparation?.(); }, true);
+        this.actions.get("retry-preparation")!.label = "書体を再試行";
+      }
+    } else if (this.overlay === "settings") {
       this.label("設定", x + 24, y + 18, 23, 0, "#354b40", true);
       const row = short ? 46 : 49, first = y + (short ? 55 : 67);
       this.label(`音量 ${Math.round(this.volume * 100)}%`, x + 24, first + 13, 13);
@@ -468,19 +473,8 @@ export class DeskScene extends Phaser.Scene {
         this.button("difficulty-hard", "細かめ", x + width - 98, first + row * 3, 74, 44, () => { this.difficulty = "hard"; this.saveSettings(); this.render(); }, this.difficulty === "hard");
       } else if (this.session) this.fitLabel(`${this.session.problem.title} · ${this.run!.difficulty === "hard" ? "細かめ" : "ふつう"}`, x + 24, first + row * 3 + 13, 12, width - 48, "#768074", 1, false);
       if (!short) this.label("合成音声：Irodori-TTS v4.1 Small", x + 24, first + row * 4 + 10, 11, width - 48, "#768074");
-      if (this.canEdit) this.button("help", "遊び方", x + 16, bottom, 96, 44, () => this.openOverlay("help"));
-      else if (this.saved.length) this.button("books", "保存した本", x + 16, bottom, 108, 44, () => this.openOverlay("books"));
-    } else if (this.overlay === "books") {
-      this.label("保存した本", x + 28, y + 28, 25, 0, "#354b40", true);
-      this.label("作品の取り込みは休止しています。保存データはそのまま残っています。新しいルールでは、手で選び直した3作品の抜粋で遊べます。", x + 28, y + 82, 14, width - 56);
-      const book = this.saved[this.reviewPage];
-      if (book) {
-        this.fitLabel(`${book.title} · ${book.author}`, x + 28, y + 208, 16, width - 56, "#354b40", 2);
-        this.button("books-prev", "←", x + 24, bottom, 44, 44, () => { this.reviewPage = Math.max(0, this.reviewPage - 1); this.render(); });
-        this.button("books-next", "→", x + 72, bottom, 44, 44, () => { this.reviewPage = Math.min(this.saved.length - 1, this.reviewPage + 1); this.render(); });
-        this.actions.get("books-prev")!.label = "前の保存した本";
-        this.actions.get("books-next")!.label = "次の保存した本";
-      }
+      if (this.canEdit) this.button("help", "遊び方", x + 16, bottom, 76, 44, () => this.openOverlay("help"));
+      this.button("licenses", "ライセンス", x + (this.canEdit ? 92 : 16), bottom, 80, 44, () => window.open("/third-party-notices.txt", "_blank", "noopener,noreferrer"));
     } else if (this.overlay === "hint") {
       this.label("読む手掛かり", x + 28, y + 28, 25, 0, "#354b40", true);
       const hints = this.session!.problem.hints;
@@ -518,7 +512,7 @@ Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。`, x + 28, b
       this.button("suspend", "中断して戻る", x + 20, y + 186, 142, 44, () => this.leave());
       this.button("end-run", "挑戦を終える", x + 20, y + 236, 142, 44, () => this.endRun());
     }
-    this.button("close", this.overlay === "leave" ? "続ける" : "閉じる", x + width - 116, bottom, 92, 44, () => this.closeOverlay(), true);
+    this.button("close", this.overlay === "leave" ? "続ける" : this.overlay === "prepare" && this.busy ? "取消" : "閉じる", x + width - 116, bottom, 92, 44, () => this.closeOverlay(), true);
   }
 
   private publish(): void {
@@ -546,19 +540,8 @@ Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。`, x + 28, b
     }
     if (this.overlay === "hint") snapshot.description = this.session!.problem.hints[this.hintIndex];
     if (this.overlay === "help") snapshot.description = "紙片をドラッグして相手の端へ。選んでから端をタップしてもつながります。外したい紙片を、PCは右クリック、スマホはダブルタップ。元に戻すで取り消せます。全部つないで読み通すと原文の順序を確かめます。誤答でライフが1減り、正しかった先頭だけが分かります。ヒントは挑戦全体で1回。取消・再表示は減りません。次問や元に戻すで回復しません。余白をドラッグして移動。二本指・ホイールで拡大縮小。";
-    if (this.overlay === "books") snapshot.description = "作品の取り込みは休止しています。保存データはそのまま残っています。" + this.saved.map((book) => `${book.title}・${book.author}`).join("。 ");
     if (this.overlay === "leave") snapshot.description = "中断しても盤面・ライフ・ヒントは残ります。原文と出典は挑戦を終えた後に読めます。";
     this.bridge.publish(snapshot);
-  }
-
-  private async loadBooks(): Promise<void> {
-    try {
-      const books = await readBooks();
-      await prepareText(books.map((book) => book.title + book.author).join(""), books.map((book) => book.title + book.author).join(""));
-      if (!this.alive) return;
-      this.saved = books;
-      this.render();
-    } catch (error) { if (this.alive) await this.report(error); }
   }
 
   private async report(error: unknown): Promise<void> {
@@ -575,45 +558,66 @@ Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。`, x + 28, b
   }
 
   private async openWork(workId: string): Promise<void> {
-    this.invalidatePlayback(); this.outcomeMark = undefined; this.suspendedHint = undefined; this.audioNotice = "";
+    this.invalidatePlayback();
     try {
       const run = new Run(PASSAGES, workId, { difficulty: this.difficulty });
       await this.prepareRun(run);
     } catch (error) { await this.report(error); }
   }
 
-  private async prepareRun(run: Run): Promise<void> {
+  // Prepare off to the side: failures and retries never replace the current board/save.
+  private async prepare(action: () => Promise<void>, retry: () => Promise<void>): Promise<boolean> {
     const request = ++this.serial;
+    this.cancelGesture(); this.retryPreparation = retry; this.overlay = "prepare";
     this.busy = true; this.notice = "準備中です。"; this.render();
-    try {
-      const passage = run.currentPassage;
-      await prepareText(passage.original + passage.title + passage.sceneTitle + passage.hints.join(""), `${UI_TEXT}${passage.title}${passage.author}`);
-      if (!this.alive || request !== this.serial) return;
-      this.clearPapers(); this.run = run; this.atSelection = false; this.reviewing = false;
-      this.hintSelecting = false; this.clearHint(); this.selected = undefined; this.focused = undefined;
-      this.overlay = undefined; this.busy = false; this.notice = ""; this.hintIndex = 0;
-      if (run.session.state.phase === "reading") this.begin();
-      else { this.syncPaper(); this.render(); }
-      if (this.suspendedHint) {
-        const { anchor, target, expanded } = this.suspendedHint;
-        const a = run.session.problem.tiles.find((tile) => tile.id === anchor), t = run.session.problem.tiles.find((tile) => tile.id === target);
-        if (a && t && run.session.snapshot().hints.some((pair) => pair.anchorId === anchor && pair.targetId === target)) {
-          this.hintAnchor = anchor; this.hintTarget = target; this.hintExpanded = expanded;
-          this.hintDescription = `「${a.text}」の続きは「${t.text}」です。`;
-          this.syncSelection(); this.render();
-        }
-        this.suspendedHint = undefined;
+    try { await action(); }
+    catch {
+      if (this.alive && request === this.serial) {
+        // This message is preloaded at boot, so showing it needs no failed font request.
+        this.busy = false; this.notice = PREPARATION_ERROR; this.render();
       }
-      if (!this.saveRun()) return;
-      if (run.pending) this.presentSubmission(run.pending);
-    } catch (error) { if (this.alive && request === this.serial) await this.report(error); }
+      return false;
+    }
+    if (!this.alive || request !== this.serial) return false;
+    if (!this.ensureCurrentRun()) {
+      if (request === this.serial) { this.busy = false; this.notice = this.saveError; this.render(); }
+      return false;
+    }
+    this.busy = false; this.retryPreparation = undefined; this.overlay = undefined; this.notice = "";
+    return true;
+  }
+
+  private async prepareRun(run: Run): Promise<void> {
+    const passage = run.currentPassage;
+    if (!await this.prepare(
+      () => prepareText(passage.original + passage.title + passage.sceneTitle + passage.hints.join(""), `${UI_TEXT}${passage.title}${passage.author}`),
+      () => this.prepareRun(run),
+    )) return;
+    if (run !== this.run) { this.outcomeMark = undefined; this.suspendedHint = undefined; }
+    this.clearPapers(); this.run = run; this.atSelection = false; this.reviewing = false;
+    this.hintSelecting = false; this.clearHint(); this.selected = undefined; this.focused = undefined; this.hintIndex = 0;
+    if (run.session.state.phase === "reading") this.begin();
+    else { this.syncPaper(); this.render(); }
+    if (this.suspendedHint) {
+      const { anchor, target, expanded } = this.suspendedHint;
+      const a = run.session.problem.tiles.find((tile) => tile.id === anchor), t = run.session.problem.tiles.find((tile) => tile.id === target);
+      if (a && t && run.session.snapshot().hints.some((pair) => pair.anchorId === anchor && pair.targetId === target)) {
+        this.hintAnchor = anchor; this.hintTarget = target; this.hintExpanded = expanded;
+        this.hintDescription = `「${a.text}」の続きは「${t.text}」です。`;
+        this.syncSelection(); this.render();
+      }
+      this.suspendedHint = undefined;
+    }
+    if (!this.saveRun()) return;
+    if (run.pending) this.presentSubmission(run.pending);
   }
 
   private async resumeRun(): Promise<void> { if (this.run) await this.prepareRun(this.run); }
 
   private async nextQuestion(): Promise<void> {
-    if (!this.run || this.presentation || !this.ensureCurrentRun() || !this.run.advance()) return;
-    this.saveRun(); await this.prepareRun(this.run);
+    if (this.busy || !this.run?.canAdvance || this.presentation || !this.ensureCurrentRun()) return;
+    const next = Run.restore(this.run.snapshot(), PASSAGES);
+    if (next.advance()) await this.prepareRun(next);
   }
 
   private submit(): void {
@@ -682,7 +686,7 @@ Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。`, x + 28, b
     }
   }
 
-  private invalidatePlayback(): void { this.serial++; this.narration?.stop(); this.audioNotice = ""; this.audioRetryable = false; this.presentation = undefined; this.replaying = false; this.replayActive = -1; this.replayConfirmed = 0; }
+  private invalidatePlayback(): void { this.serial++; this.retryPreparation = undefined; this.narration?.stop(); this.audioNotice = ""; this.audioRetryable = false; this.presentation = undefined; this.replaying = false; this.replayActive = -1; this.replayConfirmed = 0; }
 
   private endRun(): void {
     if (!this.run || !this.ensureCurrentRun()) return;
@@ -693,22 +697,18 @@ Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。`, x + 28, b
 
   private showResult(): void { this.invalidatePlayback(); this.reviewing = false; this.overlay = undefined; this.render(); }
 
-  private async openReview(index: number): Promise<void> {
+  private async openReview(index: number, startFragment?: number): Promise<void> {
     if (!this.ended) return;
-    this.invalidatePlayback(); this.audioNotice = ""; const request = this.serial;
+    this.invalidatePlayback();
     const passage = this.reviewPassages[index]; if (!passage) return;
-    this.busy = true;
-    try {
-      await prepareText(passage.original, passage.location + passage.title + passage.author);
-      if (!this.alive || request !== this.serial) return;
-      this.reviewIndex = index; this.reviewing = true; this.busy = false; this.notice = "";
-      this.syncPaper(); this.readingCamera(); this.render();
-    } catch (error) { if (request === this.serial) await this.report(error); }
+    if (!await this.prepare(() => prepareText(passage.original, passage.location + passage.title + passage.author), () => this.openReview(index, startFragment))) return;
+    this.reviewIndex = index; this.reviewing = true;
+    this.syncPaper(); this.readingCamera(); this.render();
+    if (startFragment !== undefined) this.playReview(startFragment);
   }
 
   private async continueListening(): Promise<void> {
-    await this.openReview(this.reviewPassages.length - 1);
-    if (this.reviewing) this.playReview(Math.max(0, (this.run?.lastSubmission?.correctPrefix ?? 0) - 1));
+    await this.openReview(this.reviewPassages.length - 1, Math.max(0, (this.run?.lastSubmission?.correctPrefix ?? 0) - 1));
   }
 
   private playReview(startFragment: number): void {
@@ -850,7 +850,7 @@ Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。`, x + 28, b
   }
 
   private openOverlay(overlay: Overlay): void { if (overlay === "hint" && !this.assembling) return; this.cancelGesture(); this.hintSelecting = false; this.overlay = overlay; this.render(); }
-  private closeOverlay(): void { this.overlay = undefined; this.notice = ""; this.render(); this.game.canvas.focus({ preventScroll: true }); }
+  private closeOverlay(): void { if (this.overlay === "prepare") { this.serial++; this.retryPreparation = undefined; this.busy = false; } this.overlay = undefined; this.notice = ""; this.render(); this.game.canvas.focus({ preventScroll: true }); }
   private leave(): void {
     this.cancelGesture();
     if (this.hintAnchor && this.hintTarget) this.suspendedHint = { anchor: this.hintAnchor, target: this.hintTarget, expanded: this.hintExpanded };
@@ -1204,7 +1204,7 @@ Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。`, x + 28, b
   }
 
   private onKey = (event: KeyboardEvent): void => {
-    if (event.target !== this.game.canvas || this.busy || event.isComposing) return;
+    if (event.target !== this.game.canvas || event.isComposing || (this.busy && !(this.overlay === "prepare" && event.key === "Escape"))) return;
     if (event.key === "Escape") {
       event.preventDefault(); this.cancelGesture();
       if (this.overlay) this.closeOverlay();
