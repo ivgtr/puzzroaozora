@@ -290,11 +290,15 @@ export class DeskScene extends Phaser.Scene {
     this.button("settings", "設定", this.w - 118, 10, 90, 44, () => this.openOverlay("settings"));
     this.panel(x, y, width, height);
     const margin = compact ? 28 : 40;
-    this.label(`0${this.libraryPage + 1}  /  03`, x + margin, y + 28, 11, 0, "#8b7463");
-    this.label("作品を選ぶ", x + width - margin - 70, y + 28, 11, 0, "#8b7463");
-    const titleY = y + (short ? 65 : compact ? 80 : 62);
-    this.fitLabel(passage.title, x + margin - 2, titleY, this.w < 380 ? 30 : compact ? 32 : 44, width - margin * 2, "#33483e", 2);
-    this.label(passage.author, x + margin, titleY + (compact ? 55 : 64), compact ? 11 : 12, width - margin * 2, "#727668");
+    const tinyCard = height < 190, compressed = short && !!this.run;
+    if (!tinyCard) {
+      this.label(`0${this.libraryPage + 1}  /  03`, x + margin, y + 28, 11, 0, "#8b7463");
+      this.label("作品を選ぶ", x + width - margin - 70, y + 28, 11, 0, "#8b7463");
+    }
+    const titleY = y + (tinyCard ? 20 : compressed ? 47 : short ? 65 : compact ? 80 : 62);
+    const titleSize = tinyCard ? 28 : compressed ? 34 : this.w < 380 ? 30 : compact ? 32 : 44;
+    this.fitLabel(passage.title, x + margin - 2, titleY, titleSize, width - margin * 2, "#33483e", tinyCard ? 1 : 2);
+    if (height >= 155) this.label(passage.author, x + margin, titleY + (compressed || tinyCard ? 46 : compact ? 55 : 64), compact ? 11 : 12, width - margin * 2, "#727668");
     if (!short) this.label("3ライフで、原文の順序をどこまで思い出せるか。", x + margin, y + (compact ? 186 : 166), 13, width - margin * 2, "#626e61", true);
     const rule = this.add.graphics().lineStyle(1, 0xaa6652, .42).lineBetween(x + margin, y + height - 65, x + width - margin, y + height - 65);
     this.hud.add(rule);
