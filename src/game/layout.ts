@@ -1,4 +1,6 @@
-import { graphemes } from "./text.ts";
+import { comparisonText, graphemes } from "./text.ts";
+import type { Point } from "./model.ts";
+import type { Bounds } from "./hint-context.ts";
 
 export const CELL = 29;
 export const PAD = 14;
@@ -45,6 +47,50 @@ export function dealManuscript(texts: readonly string[], columns: number, viewpo
     const point = { x: margin + x, y };
     x += paper.width + gap;
     rowHeight = Math.max(rowHeight, paper.height);
+    return point;
+  });
+}
+
+// Map canonical fragments back onto the displayed manuscript, retaining the
+// original paragraph breaks/indentation. Layout glyph indices are graphemes.
+export function manuscriptFragmentRanges(text: string, fragments: readonly string[]): { start: number; end: number }[] {
+  const chars = graphemes(text.replace(/\r\n?/g, "\n"));
+  const positions: number[] = [];
+  let lineStart = true;
+  chars.forEach((char, index) => {
+    if (char === "\n") { lineStart = true; return; }
+    if (lineStart && (char === " " || char === "　")) return;
+    lineStart = false;
+    positions.push(index);
+  });
+  if (fragments.map(comparisonText).join("") !== comparisonText(text)) {
+    throw new Error("原稿の本文と紙片の区切りが一致しません。");
+  }
+  let offset = 0;
+  return fragments.map((part) => {
+    const length = graphemes(comparisonText(part)).length;
+    const start = positions[offset] ?? chars.length;
+    const end = length ? positions[offset + length - 1] + 1 : start;
+    offset += length;
+    return { start, end };
+  });
+}
+
+/** Hit the displayed character cell, including wrapped and half-width text. */
+export function fragmentAt(layout: ManuscriptLayout, ranges: readonly { start: number; end: number }[], point: Point): number {
+  const glyph = layout.glyphs.find((glyph) => point.x >= glyph.x && point.x < glyph.x + glyph.advance && point.y >= glyph.y && point.y < glyph.y + CELL);
+  return glyph ? ranges.findIndex((range) => glyph.index >= range.start && glyph.index < range.end) : -1;
+}
+
+/** Retain reading order and the original anchor where free, without covering other papers. */
+export function detachedPositions(parts: readonly { width: number; height: number }[], origin: Point, obstacles: readonly Bounds[]): Point[] {
+  let y = origin.y;
+  return parts.map(({ width, height }) => {
+    const x = origin.x;
+    let collision: Bounds | undefined;
+    while ((collision = obstacles.find((other) => x < other.x + other.width + 24 && x + width + 24 > other.x && y < other.y + other.height + 24 && y + height + 24 > other.y))) y = collision.y + collision.height + 24;
+    const point = { x, y };
+    y += height + 24;
     return point;
   });
 }

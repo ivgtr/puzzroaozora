@@ -1,6 +1,5 @@
 import Phaser from "phaser";
-import { BODY_SIZE, CELL, PAD, layoutManuscript, type ManuscriptLayout } from "./layout.ts";
-import { graphemes } from "./text.ts";
+import { BODY_SIZE, CELL, PAD, fragmentAt, layoutManuscript, manuscriptFragmentRanges, type ManuscriptLayout } from "./layout.ts";
 import type { Point } from "./model.ts";
 import type { Bounds } from "./hint-context.ts";
 
@@ -70,14 +69,17 @@ export class Paper extends Phaser.GameObjects.Container {
   private edgeInk: Phaser.GameObjects.Graphics;
   private lifted = false;
   private hintInk: Phaser.GameObjects.Graphics;
+  private readingInk: Phaser.GameObjects.Graphics;
   private fragmentRanges: { start: number; end: number }[];
+  private edge: Phaser.Math.Vector2[];
 
   constructor(scene: Phaser.Scene, text: string, columns: number, fragments: readonly string[] = [text], bonds: readonly boolean[] = []) {
     super(scene, 0, 0);
     this.layout = layoutManuscript(text, columns);
+    this.fragmentRanges = manuscriptFragmentRanges(text, fragments);
     const { width, height, rows } = this.layout;
     this.setSize(width, height);
-    const edge = paperEdge(width, height).map(({ x, y }) => new Phaser.Math.Vector2(x, y));
+    const edge = this.edge = paperEdge(width, height).map(({ x, y }) => new Phaser.Math.Vector2(x, y));
     this.shadows = [0, 1, 2].map(() => scene.add.graphics().fillStyle(0x18291f).fillPoints(edge, true));
     this.setElevation(false, false);
     const id = serial++;
@@ -110,26 +112,22 @@ export class Paper extends Phaser.GameObjects.Container {
     canvas.refresh();
     const ink = scene.add.image(0, 0, this.textureKeys[1]).setOrigin(0).setDisplaySize(width, height);
     const cuts = scene.add.graphics();
-    let offset = 0;
-    fragments.slice(0, -1).forEach((part, boundary) => {
-      offset += graphemes(part).length;
+    fragments.slice(0, -1).forEach((_, boundary) => {
+      const offset = this.fragmentRanges[boundary + 1]?.start;
       if (bonds[boundary]) return;
       const next = this.layout.glyphs.find((glyph) => glyph.index === offset);
       if (!next) return;
       const seam = { x: next.x, y: next.y + CELL / 2, boundary };
       this.seams.push(seam);
-      cuts.lineStyle(3, MAT, .78).lineBetween(seam.x, next.y - 3, seam.x, next.y + CELL + 3);
-      cuts.lineStyle(1, 0xfffbef, .9).lineBetween(seam.x + 1.5, next.y, seam.x + 1.5, next.y + CELL);
+      // A shallow paper crease, contained in the cell rather than crossing rows.
+      cuts.lineStyle(.8, 0x8f826b, .3).lineBetween(seam.x, next.y + 3, seam.x, next.y + CELL - 3);
+      cuts.lineStyle(.8, 0xfffcf1, .8).lineBetween(seam.x + 1, next.y + 3, seam.x + 1, next.y + CELL - 3);
     });
     this.edgeInk = scene.add.graphics().lineStyle(1.5, GRID).strokePoints(edge, true).setAlpha(0);
     this.outline = scene.add.graphics();
     this.hintInk = scene.add.graphics();
-    let start = 0;
-    this.fragmentRanges = fragments.map((part) => {
-      const end = start + graphemes(part).length;
-      const range = { start, end }; start = end; return range;
-    });
-    this.add([...this.shadows, ground, this.hintInk, grid, ink, cuts, this.edgeInk, this.outline]);
+    this.readingInk = scene.add.graphics();
+    this.add([...this.shadows, ground, this.hintInk, this.readingInk, grid, ink, cuts, this.edgeInk, this.outline]);
     const first = this.layout.glyphs[0];
     const last = this.layout.glyphs[this.layout.glyphs.length - 1];
     this.front = { x: 0, y: first ? first.y + CELL / 2 : height / 2 };
@@ -138,8 +136,10 @@ export class Paper extends Phaser.GameObjects.Container {
 
   focus(selected: boolean, focused = false): void {
     this.outline.clear();
-    if (selected || focused) this.outline.lineStyle(2, selected ? 0xa45f46 : 0x65796a, .95).strokeRoundedRect(-4, -4, this.width + 8, this.height + 8, 2);
+    if (selected || focused) this.outline.lineStyle(focused ? 1.5 : 1.2, selected ? 0x947050 : 0x65796a, .78).strokePoints(this.edge, true);
   }
+
+  fragmentAt(point: Point): number { return fragmentAt(this.layout, this.fragmentRanges, { x: point.x - this.x, y: point.y - this.y }); }
 
   fragmentBounds(fragmentIndex: number): (Bounds & { first: Bounds }) | undefined {
     const range = this.fragmentRanges[fragmentIndex];
@@ -166,6 +166,33 @@ export class Paper extends Phaser.GameObjects.Container {
       }
     }
   }
+
+  /** A quiet wash sits under the type; no ruled underlines compete with the grid. */
+  reading(activeIndex: number, confirmedCount: number, wrongIndex = -1): void {
+    this.readingInk.clear();
+    this.fragmentRanges.forEach((range, index) => {
+      const active = index === activeIndex;
+      if (!active && index >= confirmedCount) return;
+      this.readingInk.fillStyle(0x8eaa91, active ? .28 : .09);
+      for (const glyph of this.layout.glyphs) {
+        if (glyph.index >= range.start && glyph.index < range.end) {
+          this.readingInk.fillRect(glyph.x, glyph.y + 1, glyph.advance, CELL - 2);
+        }
+      }
+    });
+    const range = this.fragmentRanges[wrongIndex];
+    const first = range && this.layout.glyphs.find((glyph) => glyph.index >= range.start && glyph.index < range.end);
+    if (first) {
+      // A bracket at the submitted wrong fragment's start, never at the answer.
+      // Shape as well as color separates a stop from the reading wash.
+      this.readingInk.lineStyle(1.5, 0x9a6b50, .85);
+      this.readingInk.lineBetween(first.x - 3, first.y + 2, first.x - 3, first.y + CELL - 2);
+      this.readingInk.lineBetween(first.x - 3, first.y + 2, first.x + 5, first.y + 2);
+      this.readingInk.lineBetween(first.x - 3, first.y + CELL - 2, first.x + 5, first.y + CELL - 2);
+    }
+  }
+
+  clearReading(): void { this.readingInk.clear(); }
 
   /** Raise only the cast shadow, leaving text, ports and pointer geometry fixed. */
   lift(animate = true): void {

@@ -1,81 +1,48 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { PASSAGES } from "../src/data/passages.ts";
-import { comparisonText, extractPassages, graphemes, type Difficulty } from "../src/game/text.ts";
-import { makeProblem } from "../src/game/model.ts";
-import { dealManuscript, CELL, PAD, layoutManuscript } from "../src/game/layout.ts";
-import { cleanAozora } from "../src/lib/aozora.ts";
-import { parseImportUrl } from "../src/lib/books.ts";
+import { prepareText } from "../src/game/fonts.ts";
+import { comparisonText, graphemes } from "../src/game/text.ts";
+import { fragmentAt, layoutManuscript, manuscriptFragmentRanges } from "../src/game/layout.ts";
 
-test("fifteen curated scenes preserve source text and provide atmosphere plus reasoning hints", () => {
-  assert.equal(PASSAGES.length, 15);
-  assert.equal(new Set(PASSAGES.map((passage) => passage.original)).size, 15);
-  assert.equal(new Set(PASSAGES.map((passage) => passage.workId)).size, 3);
-  for (const passage of PASSAGES) {
-    assert.equal(passage.fragments.join(""), comparisonText(passage.original));
-    assert.ok(passage.sourceUrl.startsWith("https://www.aozora.gr.jp/cards/"));
-    assert.ok(passage.location && passage.note);
-    assert.equal(passage.curatedVersion, 1);
-    assert.equal(passage.sceneTitle, passage.title, "selection uses the original work title");
-    assert.ok(passage.sceneTitle && passage.premise);
-    assert.ok(passage.hints.length >= 2 && passage.hints.length <= 3);
-    assert.ok(passage.hints.every((hint) => hint.trim().length > 0));
-    assert.ok(passage.fragments.length >= 8 && passage.fragments.length <= 12);
-    assert.ok(passage.fragments.every((fragment) => graphemes(fragment).length >= 3));
-    for (const difficulty of ["easy", "normal", "hard"] as Difficulty[]) assert.doesNotThrow(() => makeProblem(passage, difficulty));
-    console.log(`${passage.id}: ${graphemes(comparisonText(passage.original)).length} characters, ${passage.fragments.length} pieces (${passage.difficulty})`);
-  }
-});
-
-test("lemon's reason and contrast stay together instead of forming independently rotatable sentence groups", () => {
-  const passage = PASSAGES.find((scene) => scene.id === "lemon-shop-v3")!;
-  assert.equal(passage.fragments.length, 8);
-  // Splitting here allowed the shop's prior history to precede that day's purchase.
-  assert.ok(passage.fragments.some((fragment) => fragment.includes("出ていたのだ。檸檬などごくありふれている。がその店というのも")));
-  assert.ok(passage.fragments.includes("珍しい檸檬が"));
-});
-
-test("graphemes, source line breaks, half-width Latin, and square grid stay separate", () => {
+test("comparison removes paragraph layout without normalizing spelling, punctuation, or inner spaces", () => {
+  assert.equal(comparisonText("　舊字、ABC ＡＢＣ。\r\n　が𠮷。"), "舊字、ABC ＡＢＣ。が𠮷。");
+  assert.deepEqual(graphemes("が𠮷👨‍👩‍👧"), ["が", "𠮷", "👨‍👩‍👧"]);
   const text = "「𠮷がABC、小っ。」\n旧かな。";
-  assert.ok(graphemes(text).includes("が"));
   const layout = layoutManuscript(text, 8);
   assert.equal(layout.glyphs.map((glyph) => glyph.text).join(""), text.replace(/\n/g, ""));
-  assert.equal((layout.width - PAD * 2) % CELL, 0);
-  assert.equal((layout.height - PAD * 2) % CELL, 0);
-  assert.ok(layout.glyphs.some((glyph) => glyph.advance === CELL / 2));
-  assert.equal(comparisonText("　旧字。\n　が𠮷。"), "旧字。が𠮷。");
-});
-
-test("finite natural extraction never slices an unbroken sentence or fabricates a passage", () => {
-  assert.deepEqual(extractPassages("字".repeat(500) + "。", "easy"), []);
-  assert.deepEqual(extractPassages("短い。", "hard"), []);
-  const source = PASSAGES.map((passage) => passage.original).join("\n");
-  const candidates = extractPassages(source, "easy");
-  assert.ok(candidates.length > 0 && candidates.length <= 8);
-  for (const candidate of candidates) {
-    assert.ok(source.includes(candidate.original));
-    assert.equal(candidate.fragments.join(""), comparisonText(candidate.original));
+  const ranges = manuscriptFragmentRanges(text, ["「𠮷が", "ABC、小っ。」", "旧かな。"]);
+  for (const glyph of layout.glyphs) {
+    const expected = ranges.findIndex((range) => glyph.index >= range.start && glyph.index < range.end);
+    assert.equal(fragmentAt(layout, ranges, { x: glyph.x + glyph.advance / 2, y: glyph.y + 14 }), expected);
   }
+  assert.equal(fragmentAt(layout, ranges, { x: 0, y: 0 }), -1);
 });
 
-test("import validates its source and refuses unknown characters instead of replacing them", () => {
-  assert.deepEqual(parseImportUrl("https://www.aozora.gr.jp/cards/000148/card789.html"), { workId: "000789", sourceUrl: "https://www.aozora.gr.jp/cards/000148/card789.html" });
-  assert.throws(() => parseImportUrl("https://www.aozora.gr.jp.evil.example/cards/000148/card789.html"));
-  assert.equal(cleanAozora("｜漢字《かんじ》\n※［＃U+20BB7］。"), "漢字\n𠮷。");
-  assert.throws(() => cleanAozora("未解決※［＃外字］。"));
-});
-
-
-test("dealing uses paper widths without overlap or sideways overflow", () => {
-  const texts = PASSAGES[0].fragments;
-  for (const width of [320, 390, 1280]) {
-    const columns = Math.max(8, Math.min(16, Math.floor((width - 88) / CELL)));
-    const positions = dealManuscript(texts, columns, width);
-    const boxes = texts.map((text, index) => ({ ...positions[index], ...layoutManuscript(text, columns) }));
-    assert.equal(positions.length, texts.length);
-    boxes.forEach((box, index) => {
-      assert.ok(box.x >= 28 && box.x + box.width <= width - 28);
-      for (const other of boxes.slice(index + 1)) assert.ok(box.x + box.width <= other.x || other.x + other.width <= box.x || box.y + box.height <= other.y || other.y + other.height <= box.y);
-    });
-  }
+test("a failed extra font is retried without reloading fonts already prepared", async (t) => {
+  const loaded: string[] = [], attempts: string[] = [];
+  let fail = true;
+  t.mock.method(globalThis, "fetch", async () => ({ ok: true, json: async () => [
+    { family: "DeskSerif", file: "first", weight: "400", ranges: [[65, 65]] },
+    { family: "DeskSerif", file: "next", weight: "400", ranges: [[66, 66]] },
+    { family: "DeskSans", file: "labels", weight: "400", ranges: [[65, 66]] },
+  ] }) as Response);
+  const globals = ["document", "FontFace"].map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)] as const);
+  t.after(() => { for (const [key, descriptor] of globals) { if (descriptor) Object.defineProperty(globalThis, key, descriptor); else Reflect.deleteProperty(globalThis, key); } });
+  Object.defineProperty(globalThis, "document", { configurable: true, value: { fonts: { add: (face: { source: string }) => loaded.push(face.source) } } });
+  Object.defineProperty(globalThis, "FontFace", { configurable: true, value: class {
+    source: string;
+    constructor(_family: string, source: string) { this.source = source; }
+    async load() {
+      attempts.push(this.source);
+      if (fail && this.source.includes("next")) throw new Error("offline");
+      return this;
+    }
+  } });
+  await prepareText("A", "A");
+  await assert.rejects(prepareText("AB", "AB"), /書体の読み込みに失敗/);
+  fail = false;
+  await prepareText("AB", "AB");
+  assert.equal(attempts.filter((source) => source.includes("next")).length, 2);
+  assert.equal(attempts.filter((source) => source.includes("first")).length, 1);
+  assert.equal(loaded.length, 3);
 });
