@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { PASSAGES } from "../data/passages.ts";
 import { Run, type Submission } from "./run.ts";
-import { NarrationPlayer } from "./narration.ts";
+import { NarrationPlayer, NARRATION_MESSAGES, type NarrationState } from "./narration.ts";
 import { NARRATION, type NarrationVoice } from "../data/narration.ts";
 import { hintExcerpt, revealOffset } from "./hint-context.ts";
 import { deskViewport, insideBoard, constrainPointer } from "./viewport.ts";
@@ -17,7 +17,7 @@ import type { DeskSnapshot, HostBridge } from "./bridge.ts";
 
 const WORKS = PASSAGES.filter((passage, index) => PASSAGES.findIndex((other) => other.workId === passage.workId) === index);
 
-export const UI_TEXT = `朗読音声を再生できません。紙面の印で読み進めます。別のタブで挑戦が更新されました。ここから再開できます。別のタブの更新を読み込めません。このタブを読み直してください。 前の結果を見る 原文の順序をどこまで思い出せるか 挑戦全体 細かめ ふつう 中断した挑戦を再開 挑戦を中断・終了する 今回の結果へ戻る ライフ 読み通しています 確認済みを早送り ここで途切れました ここから先は未判定です 読み通せました 前の抜粋を読み返す 次の抜粋を読み返す 停止 聴く この作品を読み通しました ここまで読み通せました 問クリア 今回の挑戦 続きを聴く 読み返す もう一度挑む 朗読の声 女性 男性 紙片の細かさ 合成音声 Irodori-TTS v4.1 Small 新しい挑戦を始めますか 中断した挑戦は終了します 新しい挑戦は3ライフ・ヒント1回で始まります 中断しても盤面・ライフ・ヒントはこの端末に残ります 原文と出典は挑戦を終えた後に読めます 中断して戻る 挑戦を終える 新しく始める すべての紙片を一つにつないでください 片目で途切れました 離れた塊の中は未判定です この端末では設定を保存できません 設定を読み込めません 挑戦を保存できません この画面を閉じると再開できない場合があります 保存した挑戦を読み込めません 新しい挑戦を始められます 青空文庫の原文 誤答でライフが1減ります 原文の順序を復元しましょう  隠す ヒントを隠す。紙片の印は残ります ヒントを見る。選んだ紙片と続き ヒントを隠す ヒントを見る 通知を閉じる 紙片を選ぶ ヒントを閉じても印は残ります。 切れ目で分離。Zで元に戻す。 選んだ紙片を見る 続きを見る 緑の下線が選んだ紙片、黄色が続きです。画面下の一節を押すとその場所へ移動できます。 ヒント 残り 回 取消 次の問題 ランダム出題 読む手掛かり 続きを知りたい紙片を選ぶ。塊は末尾が対象です。 色のついた部分が続きです。自動ではつなぎません。 前に見たヒントです。 続きを表示できません。別の紙片を選んでください。 残り0回です。前に見た紙片は再表示できます。 ヒントは挑戦全体で1回。取消・再表示は減りません。 誤答でライフが1減ります。原文の順序を復元しましょう。 同じ作品の別の抜粋をランダムに出題します。 問からランダムに出題 ヒントで続きを表示した紙片だけ色がつきます。 作品を選ぶ 作品選択に戻る パズルを続ける パズルを始める すべての紙片を表示 原稿全体を表示 音量を下げる 音量を上げる 消音を解除 消音にする 紙片をひろげる 遊び方 読了 枚の紙片 ↗ 青空パズル つなぐ 手掛かり 読み通す 別の情景 同じ情景 もう一度 つながりを見直す 原文 出典を読む 全体表示 元に戻す 遊び方 設定 閉じる 保存した本 作品の取り込みは休止しています。保存データはそのまま残っています。新しいルールでは、手で選び直した3作品の抜粋で遊べます。 作品選択に戻りますか 途中の配置は保存されません。 続ける 選び直す 一枚の原稿になりました。 紙片を選び、相手の端へ 余白を動かすと、ほかの紙片が見つかります 左端が前、右端が後。選んだ紙片をつなぎます。 切れ目をタップして、いつでも外せます。 つながりを作りました。 つながりを外しました。 一つ前の操作に戻しました。 原文とは、まだ少し違うようです。切れ目を外して読み直してみましょう。 ひとつにつながりました。読み通して確かめましょう。 音量 小 大 音なし 動きを控える 有効 無効 このブラウザでは音を利用できません。 紙片をドラッグして、相手の端へ。 紙片を選んでから相手の端をタップしてもつながります。 正誤は最後に読み通すまで分かりません。 選んだ紙片の切れ目をタップすると外せます。 余白をドラッグして移動。二本指・ホイールで拡大縮小。 矢印で移動、Enterで選択、[ と ]で前後へ。 Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。 次の手掛かり 前へ 次へ 準備中です。 読み込めませんでした。 読み込みを完了できませんでした。 段落の順序を確かめる 紙片 残り 組 つながり 確認 正解の場所は示しません まだ保存した本はありません。 記録 この三問は手作業で選んだ抜粋です。 答えは、つなぎ終えたあとに。 選択した紙片を前につなぐ 選択した紙片を後につなぐ 番目の切れ目を外す 01 02 03 / · ← → ＋ − × … ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789[]()%「」、。`;
+export const UI_TEXT = Object.values(NARRATION_MESSAGES).join("") + `再試行 朗読を再試行 ライフ 片 別のタブで挑戦が更新されました。ここから再開できます。別のタブの更新を読み込めません。このタブを読み直してください。 前の結果を見る 原文の順序をどこまで思い出せるか 挑戦全体 細かめ ふつう 中断した挑戦を再開 挑戦を中断・終了する 今回の結果へ戻る ライフ 読み通しています 確認済みを早送り ここで途切れました ここから先は未判定です 読み通せました 前の抜粋を読み返す 次の抜粋を読み返す 停止 聴く この作品を読み通しました ここまで読み通せました 問クリア 今回の挑戦 続きを聴く 読み返す もう一度挑む 朗読の声 女性 男性 紙片の細かさ 合成音声 Irodori-TTS v4.1 Small 新しい挑戦を始めますか 中断した挑戦は終了します 新しい挑戦は3ライフ・ヒント1回で始まります 中断しても盤面・ライフ・ヒントはこの端末に残ります 原文と出典は挑戦を終えた後に読めます 中断して戻る 挑戦を終える 新しく始める すべての紙片を一つにつないでください 片目で途切れました 離れた塊の中は未判定です この端末では設定を保存できません 設定を読み込めません 挑戦を保存できません この画面を閉じると再開できない場合があります 保存した挑戦を読み込めません 新しい挑戦を始められます 青空文庫の原文 誤答でライフが1減ります 原文の順序を復元しましょう  隠す ヒントを隠す。紙片の印は残ります ヒントを見る。選んだ紙片と続き ヒントを隠す ヒントを見る 通知を閉じる 紙片を選ぶ ヒントを閉じても印は残ります。 切れ目で分離。Zで元に戻す。 選んだ紙片を見る 続きを見る 緑の下線が選んだ紙片、黄色が続きです。画面下の一節を押すとその場所へ移動できます。 ヒント 残り 回 取消 次の問題 ランダム出題 読む手掛かり 続きを知りたい紙片を選ぶ。塊は末尾が対象です。 色のついた部分が続きです。自動ではつなぎません。 前に見たヒントです。 続きを表示できません。別の紙片を選んでください。 残り0回です。前に見た紙片は再表示できます。 ヒントは挑戦全体で1回。取消・再表示は減りません。 誤答でライフが1減ります。原文の順序を復元しましょう。 同じ作品の別の抜粋をランダムに出題します。 問からランダムに出題 ヒントで続きを表示した紙片だけ色がつきます。 作品を選ぶ 作品選択に戻る パズルを続ける パズルを始める すべての紙片を表示 原稿全体を表示 音量を下げる 音量を上げる 消音を解除 消音にする 紙片をひろげる 遊び方 読了 枚の紙片 ↗ 青空パズル つなぐ 手掛かり 読み通す 別の情景 同じ情景 もう一度 つながりを見直す 原文 出典を読む 全体表示 元に戻す 遊び方 設定 閉じる 保存した本 作品の取り込みは休止しています。保存データはそのまま残っています。新しいルールでは、手で選び直した3作品の抜粋で遊べます。 作品選択に戻りますか 途中の配置は保存されません。 続ける 選び直す 一枚の原稿になりました。 紙片を選び、相手の端へ 余白を動かすと、ほかの紙片が見つかります 左端が前、右端が後。選んだ紙片をつなぎます。 切れ目をタップして、いつでも外せます。 つながりを作りました。 つながりを外しました。 一つ前の操作に戻しました。 原文とは、まだ少し違うようです。切れ目を外して読み直してみましょう。 ひとつにつながりました。読み通して確かめましょう。 音量 小 大 音なし 動きを控える 有効 無効 このブラウザでは音を利用できません。 紙片をドラッグして、相手の端へ。 紙片を選んでから相手の端をタップしてもつながります。 正誤は最後に読み通すまで分かりません。 選んだ紙片の切れ目をタップすると外せます。 余白をドラッグして移動。二本指・ホイールで拡大縮小。 矢印で移動、Enterで選択、[ と ]で前後へ。 Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。 次の手掛かり 前へ 次へ 準備中です。 読み込めませんでした。 読み込みを完了できませんでした。 段落の順序を確かめる 紙片 残り 組 つながり 確認 正解の場所は示しません まだ保存した本はありません。 記録 この三問は手作業で選んだ抜粋です。 答えは、つなぎ終えたあとに。 選択した紙片を前につなぐ 選択した紙片を後につなぐ 番目の切れ目を外す 01 02 03 / · ← → ＋ − × … ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789[]()%「」、。`;
 
 type Overlay = "settings" | "leave" | "replace" | "books" | "help" | "hint";
 const SAVE_KEY = "aozora-puzzle-run-v1";
@@ -51,6 +51,9 @@ export class DeskScene extends Phaser.Scene {
   private outcomeMark?: Submission;
   private suspendedHint?: { anchor: string; target: string; expanded: boolean };
   private audioNotice = "";
+  private audioRetryable = false;
+  private narrationState: NarrationState = "loading";
+  private replayStart = 0;
   private replaying = false;
   private replayActive = -1;
   private replayConfirmed = 0;
@@ -96,7 +99,8 @@ export class DeskScene extends Phaser.Scene {
   private get hasHintContext(): boolean { return !!(this.assembling && this.hintAnchor && this.hintTarget); }
   private get contextNotice(): string {
     if (!this.session) return "";
-    if (this.audioNotice || this.saveError) return this.audioNotice || this.saveError;
+    if (this.saveError) return this.saveError;
+    if (this.audioNotice && (this.presentation?.stage === "reading" || this.replaying)) return this.audioNotice;
     return this.assembling && (!!this.notice && this.notice === this.reportedError || /^(原文の順序と|原文とは|残り0回です|続きを表示できません)/.test(this.notice)) ? this.notice : "";
   }
   private get contextOpen(): boolean { return !!this.contextNotice || (this.hasHintContext && this.hintExpanded); }
@@ -343,13 +347,17 @@ export class DeskScene extends Phaser.Scene {
     this.actions.get("library")!.label = this.ended ? "今回の結果へ戻る" : "挑戦を中断・終了する";
     this.label("青空パズル", 48, 16, this.w < 400 ? 14 : 16, 0, "#354b40");
     const lives = this.presentation?.lives ?? run.lives, clears = this.presentation?.clears ?? run.clears;
-    this.label(`残り${lives} · ${clears}/${run.total}`, this.w < 400 ? 136 : 155, 17, 12, 0, lives === 1 ? "#8b513d" : "#526452");
+    const statusX = this.w < 400 ? 138 : 155;
+    if (this.w < 480) {
+      this.label(`ライフ ${lives}`, statusX, 8, 10, 0, lives === 1 ? "#8b6048" : "#697365");
+      this.label(`${clears} / ${run.total} 問`, statusX, 27, 11, 0, "#697365", true);
+    } else this.label(`ライフ ${lives}　 ${clears} / ${run.total} 問`, statusX, 17, 12, 0, "#697365", true);
     this.button("overview", "全体", this.w - 96, 4, 48, 44, () => this.overview());
     this.button("settings", "設定", this.w - 48, 4, 44, 44, () => this.openOverlay("settings"));
     this.actions.get("overview")!.label = complete || this.reviewing ? "原稿全体を表示" : "すべての紙片を表示";
     const y = this.h - 48;
     if (this.reviewing) {
-      if (this.contextNotice) this.fitLabel(this.contextNotice, 12, this.boardBottom + 5, 12, this.w - 24, "#647465", 2, false);
+      this.renderPlaybackNotice();
       const passage = this.reviewPassage!;
       this.button("review-prev", "←", 4, y, 40, 44, () => { void this.openReview((this.reviewIndex + this.reviewPassages.length - 1) % this.reviewPassages.length); });
       this.button("review-next", "→", 46, y, 40, 44, () => { void this.openReview((this.reviewIndex + 1) % this.reviewPassages.length); });
@@ -361,10 +369,10 @@ export class DeskScene extends Phaser.Scene {
       return;
     }
     if (this.presentation) {
-      if (this.contextNotice) this.fitLabel(this.contextNotice, 12, this.boardBottom + 5, 12, this.w - 24, "#647465", 2, false);
+      this.renderPlaybackNotice();
       const p = this.presentation;
-      const text = p.stage === "stopped" ? "ここで途切れました" : p.stage === "celebrating" ? "読み通せました" : "読み通しています…";
-      this.label(text, 14, y + 13, 12, this.w - 166, "#526452");
+      const text = p.stage === "stopped" ? "ここで途切れました" : p.stage === "celebrating" ? "読み通せました" : this.readingStatus(p.active, p.submission.tiles.length);
+      this.fitLabel(text, 14, y + 13, 12, this.w - (p.submission.skipPrefixCount > p.confirmed ? 178 : 28), "#64705f", 1);
       if (p.stage === "reading" && p.submission.skipPrefixCount > 0 && p.confirmed < p.submission.skipPrefixCount) this.button("skip-prefix", "確認済みを早送り", this.w - 160, y, 154, 44, () => this.narration?.skipToFragment(p.submission.skipPrefixCount));
       return;
     }
@@ -389,6 +397,26 @@ export class DeskScene extends Phaser.Scene {
     if (session.canCheck && !this.hintSelecting) this.button("check", "読み通す", this.w / 2 - (checkingWithContext ? 76 : 66), y, checkingWithContext ? 84 : 104, 44, () => this.submit(), true);
     this.button("hint", this.hintSelecting ? `取消 残り${this.hintsRemaining}` : checkingWithContext ? `ヒント ${this.hintsRemaining}` : `ヒント 残り${this.hintsRemaining}`, this.w - (checkingWithContext ? 100 : 112), y, checkingWithContext ? 96 : 108, 44, () => this.toggleHint(), this.hintSelecting);
     this.actions.get("hint")!.label = this.hintSelecting ? `ヒントを取り消す。残り${this.hintsRemaining}回` : `ヒント。挑戦全体で残り${this.hintsRemaining}回。紙片を選ぶと続きを表示`;
+  }
+
+  private readingStatus(active: number, total: number): string {
+    if (this.narrationState === "loading") return NARRATION_MESSAGES.loading;
+    const reading = this.volume === 0 || this.narrationState === "visual" ? NARRATION_MESSAGES.visual : "読み通しています…";
+    return `${reading}　${Math.max(1, active + 1)} / ${total} 片`;
+  }
+
+  private renderPlaybackNotice(): void {
+    if (!this.contextNotice) return;
+    const retry = !this.saveError && this.audioRetryable && (this.presentation?.stage === "reading" || this.replaying);
+    this.fitLabel(this.contextNotice, 14, this.boardBottom + 6, 12, this.w - (retry ? 92 : 28), "#7d715e", 2, false);
+    if (retry) {
+      this.button("retry-audio", "再試行", this.w - 76, this.boardBottom + 4, 70, 44, () => {
+        // Replay only the existing receipt. Never submit again or spend another life.
+        if (this.presentation?.stage === "reading" && this.run?.pending) this.presentSubmission(this.run.pending);
+        else if (this.replaying) this.playReview(this.replayStart);
+      });
+      this.actions.get("retry-audio")!.label = "朗読を再試行";
+    }
   }
 
   private renderResult(): void {
@@ -493,14 +521,14 @@ Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。`, x + 28, b
     const mode = this.overlay ?? (!this.session ? "selection" : this.reviewing ? "review" : this.presentation ? this.presentation.stage : this.ended ? "result" : this.hintSelecting ? "hint-select" : this.session.state.phase);
     const lives = this.presentation?.lives ?? this.run?.lives, clears = this.presentation?.clears ?? this.run?.clears;
     const runStatus = this.session ? `ライフ${lives}。${this.run?.total}問中${clears}問クリア。` : "";
-    const snapshot: DeskSnapshot = { mode, title: this.session ? `青空パズル · ${this.session.problem.title}` : "青空パズル", status: runStatus + (this.saveError || this.notice || (this.hintSelecting ? "続きを知りたい紙片を選ぶ。塊は末尾が対象です。" : "")), actions, pieces: [] };
+    const snapshot: DeskSnapshot = { mode, title: this.session ? `青空パズル · ${this.session.problem.title}` : "青空パズル", status: runStatus + (this.contextNotice || this.notice || (this.hintSelecting ? "続きを知りたい紙片を選ぶ。塊は末尾が対象です。" : "")), actions, pieces: [] };
     if (this.session && !this.overlay) {
       if (this.reviewing && this.ended) {
         snapshot.original = this.reviewPassage!.original;
         snapshot.description = `${this.reviewIndex + 1}/${this.reviewPassages.length}。${this.reviewPassage!.location}` + (this.replaying ? `。${this.replayActive + 1}片目を読んでいます。` : "");
       } else if (this.presentation) {
         const p = this.presentation;
-        snapshot.description = p.stage === "stopped" ? `${p.submission.correctPrefix + 1}片目で途切れました。ここから先は未判定です。` : p.stage === "celebrating" ? "最後まで読み通せました。" : `${Math.max(1, p.active + 1)}片目を読んでいます。`;
+        snapshot.description = p.stage === "stopped" ? `${p.submission.correctPrefix + 1}片目で途切れました。ここから先は未判定です。` : p.stage === "celebrating" ? "最後まで読み通せました。" : this.readingStatus(p.active, p.submission.tiles.length);
       } else if (this.canEdit) {
         snapshot.pieces = this.session.state.chains.map((chain) => ({ id: chain.id, text: this.session!.text(chain), selected: chain.id === this.selected }));
         snapshot.description = `原文の順序を復元してください。ヒントは挑戦全体で残り${this.hintsRemaining}回。` + this.hintDescription;
@@ -595,13 +623,14 @@ Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。`, x + 28, b
   private presentSubmission(submission: Submission): void {
     const run = this.run!, session = run.session;
     const request = ++this.serial;
-    this.narration?.stop(); this.replaying = false;
+    this.narration?.stop(); this.replaying = false; this.audioNotice = ""; this.audioRetryable = false; this.narrationState = "loading";
     this.presentation = { submission, active: -1, confirmed: 0, stage: "reading", lives: run.lives + (submission.correct ? 0 : 1), clears: run.clears - (submission.correct ? 1 : 0) };
     this.notice = "読み通しています…"; this.syncSelection(); this.render();
     const byId = new Map(session.problem.tiles.map((tile) => [tile.id, tile.text]));
     const fragments = submission.tiles.map((id) => byId.get(id)!);
     const finish = () => {
       if (!this.alive || request !== this.serial || this.run !== run || !this.presentation) return;
+      this.audioNotice = ""; this.audioRetryable = false;
       this.presentation.active = -1; this.presentation.confirmed = submission.correctPrefix;
       this.presentation.stage = submission.correct ? "celebrating" : "stopped";
       this.notice = submission.correct ? "最後まで読み通せました。" : `${submission.correctPrefix + 1}片目で途切れました。ここから先は未判定です。`;
@@ -628,7 +657,8 @@ Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。`, x + 28, b
     void this.narration?.play({ track: NARRATION[session.problem.id]?.[this.voice], fragments, correctPrefix: submission.correctPrefix, maximumSkipFragment: submission.skipPrefixCount, volume: this.volume,
       onProgress: (active: number, confirmed: number) => { if (request !== this.serial || !this.presentation) return; this.presentation.active = active; this.presentation.confirmed = confirmed; this.syncReading(); this.render(); },
       onFinish: finish,
-      onFallback: (message: string) => { if (request !== this.serial) return; this.audioNotice = message; this.render(); },
+      onState: (state) => { if (request !== this.serial) return; this.narrationState = state; this.render(); },
+      onFallback: (message, retryable) => { if (request !== this.serial) return; this.audioNotice = message; this.audioRetryable = retryable; this.render(); },
     });
   }
 
@@ -647,7 +677,7 @@ Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。`, x + 28, b
     }
   }
 
-  private invalidatePlayback(): void { this.serial++; this.narration?.stop(); this.presentation = undefined; this.replaying = false; this.replayActive = -1; this.replayConfirmed = 0; }
+  private invalidatePlayback(): void { this.serial++; this.narration?.stop(); this.audioNotice = ""; this.audioRetryable = false; this.presentation = undefined; this.replaying = false; this.replayActive = -1; this.replayConfirmed = 0; }
 
   private endRun(): void {
     if (!this.run || !this.ensureCurrentRun()) return;
@@ -678,13 +708,15 @@ Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。`, x + 28, b
 
   private playReview(startFragment: number): void {
     const passage = this.reviewPassage; if (!passage || !this.ended || !this.reviewing) return;
-    const request = ++this.serial; this.replaying = true; this.replayActive = -1; this.replayConfirmed = startFragment;
+    const request = ++this.serial; this.replaying = true; this.replayStart = startFragment; this.replayActive = -1; this.replayConfirmed = startFragment;
+    this.audioNotice = ""; this.audioRetryable = false; this.narrationState = "loading";
     const fragments = this.run!.difficulty === "hard" ? [...(passage.hardFragments ?? passage.fragments)] : passage.fragments;
     this.render();
     void this.narration?.play({ track: NARRATION[passage.id]?.[this.voice], fragments, correctPrefix: fragments.length, startFragment, volume: this.volume,
       onProgress: (active: number, confirmed: number) => { if (request !== this.serial) return; this.replayActive = active; this.replayConfirmed = confirmed; this.syncReading(); this.publish(); },
-      onFinish: () => { if (request !== this.serial) return; this.replaying = false; this.replayActive = -1; this.replayConfirmed = fragments.length; this.syncReading(); this.render(); },
-      onFallback: (message: string) => { if (request !== this.serial) return; this.audioNotice = message; this.render(); },
+      onFinish: () => { if (request !== this.serial) return; this.replaying = false; this.audioNotice = ""; this.audioRetryable = false; this.replayActive = -1; this.replayConfirmed = fragments.length; this.syncReading(); this.render(); },
+      onState: (state) => { if (request !== this.serial) return; this.narrationState = state; this.render(); },
+      onFallback: (message, retryable) => { if (request !== this.serial) return; this.audioNotice = message; this.audioRetryable = retryable; this.render(); },
     });
   }
 

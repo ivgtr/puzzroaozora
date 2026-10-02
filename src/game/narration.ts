@@ -85,7 +85,8 @@ export interface NarrationRequest {
   onProgress: (activeIndex: number, confirmedCount: number) => void;
   /** Presentation only. Game judgment/life changes must already be settled. */
   onFinish: () => void;
-  onFallback: (message: string) => void;
+  onFallback: (message: string, retryable: boolean) => void;
+  onState?: (state: NarrationState) => void;
 }
 
 export interface NarrationClock {
@@ -123,7 +124,16 @@ const defaultClock: NarrationClock = {
   schedule: (callback, milliseconds) => setTimeout(callback, milliseconds),
   cancel: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
 };
-const FALLBACK = "朗読音声を再生できません。紙面の印で読み進めます。";
+export type NarrationState = "loading" | "audio" | "visual";
+export const NARRATION_MESSAGES = {
+  loading: "朗読を準備しています…",
+  visual: "音なしで確かめています…",
+  network: "音声を読み込めませんでした。通信を確認して再試行できます。",
+  timeout: "音声の読込に時間がかかっています。音なしで続けます。",
+  device: "このブラウザでは朗読を再生できません。音なしで続けます。",
+  data: "この抜粋の音声を使えません。音なしで続けます。",
+  interrupted: "音声が停止しました。再試行するか音なしで続けられます。",
+} as const;
 
 /** One continuous source, cut by the audio clock, with generation-safe cancellation. */
 export class NarrationPlayer {
@@ -169,11 +179,13 @@ export class NarrationPlayer {
       run.timer = this.clock.schedule(() => this.finish(run), 0);
       return;
     }
-    if (this.volume === 0) { this.startVisual(run, fallback); return; }
-    if (fallback || !this.options.context) { this.startVisual(run, true); return; }
+    if (this.volume === 0) { this.startVisual(run); return; }
+    if (fallback) { this.startVisual(run, NARRATION_MESSAGES.data, false); return; }
+    if (!this.options.context) { this.startVisual(run, NARRATION_MESSAGES.device, false); return; }
     run.abort = new AbortController();
-    run.timeout = this.clock.schedule(() => this.startVisual(run, true), this.options.loadTimeoutMs ?? 10_000);
-    void this.loadAndPlay(run);
+    run.timeout = this.clock.schedule(() => this.startVisual(run, NARRATION_MESSAGES.timeout), this.options.loadTimeoutMs ?? 10_000);
+    run.request.onState?.("loading");
+    if (this.active(run)) void this.loadAndPlay(run);
   }
 
   stop(): void {
@@ -194,7 +206,7 @@ export class NarrationPlayer {
     const run = this.current;
     if (run?.gain) run.gain.gain.setValueAtTime(this.volume, this.options.context!.currentTime);
     // Muting during a slow load still gives immediate, cancellable visual progress.
-    if (run?.mode === "loading" && this.volume === 0) this.startVisual(run, false);
+    if (run?.mode === "loading" && this.volume === 0) this.startVisual(run);
   }
 
   /** Explicit fast-forward, restricted to the already-judged prefix in this request. */
@@ -214,10 +226,10 @@ export class NarrationPlayer {
     run.announced = false;
     if (run.mode === "audio" && run.buffer) {
       if (run.plan.safeSeekFragments.includes(index)) this.startAudio(run, run.buffer);
-      else this.startVisual(run, true);
+      else this.startVisual(run, NARRATION_MESSAGES.data, false);
     }
-    else if (run.mode === "visual") this.startVisual(run, false);
-    else if (!run.plan.safeSeekFragments.includes(index)) this.startVisual(run, true);
+    else if (run.mode === "visual") this.startVisual(run);
+    else if (!run.plan.safeSeekFragments.includes(index)) this.startVisual(run, NARRATION_MESSAGES.data, false);
     return true;
   }
 
@@ -227,29 +239,37 @@ export class NarrationPlayer {
     const context = this.options.context!;
     try {
       // Called from the user's reading gesture; Phaser owns the autoplay context.
-      const resume = context.state === "running" ? Promise.resolve() : context.resume();
+      const resume = context.state === "running" ? Promise.resolve() : context.resume().catch(() => { throw new Error(NARRATION_MESSAGES.interrupted); });
       const load = async (): Promise<AudioBuffer | undefined> => {
         const cached = this.buffers.get(run.plan.url);
         if (cached) return cached;
-        const response = await this.fetchAudio(run.plan.url, { signal: run.abort!.signal, mode: "cors", credentials: "omit" });
-        if (!response.ok) throw new Error("朗読音声の取得に失敗しました。");
-        const bytes = await response.arrayBuffer();
+        let bytes: ArrayBuffer;
+        try {
+          const response = await this.fetchAudio(run.plan.url, { signal: run.abort!.signal, mode: "cors", credentials: "omit" });
+          if (!response.ok) throw new Error(`Audio HTTP ${response.status}`);
+          bytes = await response.arrayBuffer();
+        } catch (cause) { throw new Error(NARRATION_MESSAGES.network, { cause }); }
         if (!this.active(run) || run.mode !== "loading") return;
-        return context.decodeAudioData(bytes);
+        return context.decodeAudioData(bytes).catch((cause) => { throw new Error(NARRATION_MESSAGES.data, { cause }); });
       };
       // Attach both rejection handlers immediately: a denied resume must not
       // become an unhandled rejection while a network request is still pending.
       const [, buffer] = await Promise.all([resume, load()]);
       if (!this.active(run) || run.mode !== "loading") return;
-      if (!buffer || context.state !== "running" || buffer.duration + 1 / buffer.sampleRate < run.plan.end) throw new Error("朗読音声が最後まで読み込めませんでした。");
+      if (context.state !== "running") throw new Error(NARRATION_MESSAGES.interrupted);
+      if (!buffer || buffer.duration + 1 / buffer.sampleRate < run.plan.end) throw new Error(NARRATION_MESSAGES.data);
       // Keep only a small working set; decoded full-book-style PCM is expensive.
       this.buffers.delete(run.plan.url);
       this.buffers.set(run.plan.url, buffer);
       while (this.buffers.size > 2) this.buffers.delete(this.buffers.keys().next().value!);
       this.clearLoad(run);
       this.startAudio(run, buffer);
-    } catch {
-      if (this.active(run) && run.mode === "loading") this.startVisual(run, true);
+    } catch (error) {
+      if (this.active(run) && run.mode === "loading") {
+        const message = error instanceof Error && Object.values(NARRATION_MESSAGES).some((known) => known === error.message)
+          ? error.message : NARRATION_MESSAGES.interrupted;
+        this.startVisual(run, message, message !== NARRATION_MESSAGES.data);
+      }
     }
   }
 
@@ -275,14 +295,16 @@ export class NarrationPlayer {
       // Hardware/audio-thread termination, not timeupdate or a JS timer. No wrong
       // piece or true continuation can sound when rendering/the tab is delayed.
       source.start(run.started, run.offset, run.plan.end - run.offset);
+      run.request.onState?.("audio");
+      if (!this.active(run)) return;
       this.advance(run, run.offset);
       this.tick(run);
     } catch {
-      this.startVisual(run, true);
+      this.startVisual(run, NARRATION_MESSAGES.interrupted);
     }
   }
 
-  private startVisual(run: Reading, report: boolean): void {
+  private startVisual(run: Reading, message?: string, retryable = true): void {
     if (!this.active(run)) return;
     const offset = this.position(run);
     this.clearLoad(run);
@@ -291,9 +313,11 @@ export class NarrationPlayer {
     run.mode = "visual";
     run.offset = offset;
     run.started = this.clock.now();
-    if (report && !run.fallbackReported) {
+    run.request.onState?.("visual");
+    if (!this.active(run)) return;
+    if (message && !run.fallbackReported && this.volume > 0) {
       run.fallbackReported = true;
-      run.request.onFallback(FALLBACK);
+      run.request.onFallback(message, retryable);
       if (!this.active(run)) return;
     }
     this.advance(run, offset);
@@ -307,7 +331,7 @@ export class NarrationPlayer {
 
   private tick(run: Reading): void {
     if (!this.active(run)) return;
-    if (run.mode === "audio" && this.options.context!.state !== "running") { this.startVisual(run, true); return; }
+    if (run.mode === "audio" && this.options.context!.state !== "running") { this.startVisual(run, NARRATION_MESSAGES.interrupted); return; }
     const position = this.position(run);
     this.advance(run, position);
     if (!this.active(run)) return;
