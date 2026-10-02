@@ -57,8 +57,8 @@ test("every join is provisional in all legacy difficulty settings; only an expli
     assert.equal(session.state.chains, assembled.chains);
     assert.equal(session.canCheck, false);
     assert.equal(session.dispatch({ type: "check" }), "none");
-    assert.equal(session.dispatch({ type: "undo" }), "undo");
-    assert.equal(session.state, assembled);
+    assert.equal(session.dispatch({ type: "undo" }), "none");
+    assert.equal(session.state.phase, "complete");
   }
 });
 
@@ -135,7 +135,7 @@ test("identical text tiles remain interchangeable at the full-text check", () =>
   assert.equal(canReconstruct("abcXabcY", ["bcXa", "abc", "Y"]), false);
 });
 
-test("invalid commands create no undo entries; movement and checking can be undone separately", () => {
+test("invalid commands create no undo entries and completion forms an Undo boundary", () => {
   const { session, id, assemble } = start();
   const before = session.state;
   assert.equal(session.dispatch({ type: "move", chain: id("A"), point: { x: NaN, y: 0 } }), "none");
@@ -147,10 +147,10 @@ test("invalid commands create no undo entries; movement and checking can be undo
   session.dispatch({ type: "undo" }); assert.equal(session.state, before);
   assert.equal(session.dispatch({ type: "undo" }), "none");
   assemble();
-  const assembled = session.state;
   session.dispatch({ type: "check" });
-  session.dispatch({ type: "undo" }); assert.equal(session.state, assembled);
-  session.dispatch({ type: "undo" }); assert.equal(session.state.chains.length, 2);
+  assert.equal(session.dispatch({ type: "undo" }), "none");
+  assert.equal(session.state.phase, "complete");
+  assert.equal(session.canUndo, false);
 });
 
 test("a new session safely replays an unchanged problem after completion", () => {
@@ -170,8 +170,8 @@ test("a new session safely replays an unchanged problem after completion", () =>
       assert.equal(next.dispatch({ type: "join", source: source.id, target: first.id, side: "after" }), "tentative");
     }
     assert.equal(next.dispatch({ type: "check" }), "complete");
-    assert.equal(next.dispatch({ type: "undo" }), "undo");
-    assert.equal(next.dispatch({ type: "check" }), "complete");
+    assert.equal(next.dispatch({ type: "undo" }), "none");
+    assert.equal(next.dispatch({ type: "check" }), "none");
     conserved(next);
   }
   assert.equal(session.state.phase, "complete");
@@ -186,7 +186,7 @@ test("curated validation refuses legacy imports or malformed scenes without chan
   assert.deepEqual(legacy, saved);
   assert.throws(() => makeProblem({ ...current, curatedVersion: 2 } as unknown as Passage), /選定シーン/);
   assert.throws(() => makeProblem({ ...current, hints: [] } as CuratedPassage), /選定シーン/);
-  assert.throws(() => makeProblem(fixture(["A", "B"])), /8〜12/);
+  assert.throws(() => makeProblem(fixture(["A", "B"])), /4〜12/);
   assert.throws(() => makeProblem({ ...current, original: "not the text" }), /一致/);
   const problem = makeProblem(current);
   assert.equal(problem.version, 3);

@@ -1,22 +1,24 @@
 # Repository guide
 
-This is a Next.js Pages Router host for a Phaser 4 manuscript reconstruction game. Read README.md and the three current game, UI, and source-data specifications in 計画/ before changing behavior. The second redesign (2026-10-01) supersedes the initial-reading, difficulty-threshold, and confirmed-join rules. The 2024 directory-structure proposal and prior verification entries are historical, not current requirements.
+Next.js Pages Router hosts a Phaser 4 manuscript reconstruction game. Read README.md and the current specifications in 計画/ before changing behavior. The 2026-10-02 finite-run/narration design (Issues #7–10) supersedes the earlier no-lives, per-question hints, long excerpts, and completion-source-unlock rules.
 
 ## Constraints
 
-- The engine-independent `Session` in `src/game/model.ts` is the single authoritative puzzle state. Phaser owns one session. React only projects snapshots and owns the mount.
-- Keep the current three works: four editor-curated excerpts for 吾輩は猫である, seven for 檸檬, and four for 銀河鉄道の夜 (15 total), selected randomly without an immediate repeat within that work. Preserve 8–12 meaningful chunks per scene. Choose excerpts for literary value and source-position coverage, not equal counts or equal thirds. `makeProblem` accepts only `curatedVersion: 1` passages and creates `Problem` v3. Existing saved/imported passages are not implicitly eligible.
-- Every join is provisional and gives identical feedback regardless of correctness. Never check partial joins or lock seams. Reveal a correct neighbor only through the player-requested, three-use hint described below. Never encode original positions in IDs, paper patterns, layout, sound, or accessibility output. Identical text remains interchangeable.
-- Check exact original order only when the player explicitly chooses 読み通す after assembling all chunks into one chain. A mismatch preserves the arrangement and gives no seam-level feedback. A successful join alone never completes the scene.
-- Keep split and Undo. The explicit hint action selects a chain and highlights the successor of its last tile without joining it or validating the chain. Three unique reveals per Session; cancellation, unavailable successors, and repeated reveals are free. Undo never refunds uses; only a new attempt resets them. Authored semantic clues remain under 遊び方 → 読む手掛かり and do not reveal exact seams. No initial reading, difficulty selector, or original/source-link access before completion.
-- Selection is one paper invitation on the same desk, with small edge controls. Completion reveals the original manuscript and source. Do not bring back a dashboard or bookshelf selection surface.
-- Existing IndexedDB records remain untouched and are listed read-only. Imports and reimports are explicitly paused; do not migrate, delete, overwrite, decrypt, silently substitute, or route old data into new play. Retain dormant source/import utilities without expanding infrastructure.
-- Solve ambiguity through passage and chunk curation, not grammar engines, language-model judging, or approximate-answer acceptance. Layout, DPI, line breaks, and blank manuscript cells never change comparison text. Use graphemes for visual boundaries.
-- Do not silently replace source text, spellings, missing glyphs, unavailable APIs, or a failed renderer. Report the failure. Do not add scoring, answer-submit APIs, a parallel DOM game, or a generic engine abstraction.
-- Use built-in Node tests for a few invariants. Do not expand permanent CI with large seed sweeps, browsers, or source-network requests. Fonts come from pinned packages during predev/prebuild; do not commit font binaries.
-- Record only executed checks, briefly in the PR body. Do not accumulate screenshots, verification logs, or temporary QA workflows in the repository. Human legibility, play balance, and listening remain separate from automated checks.
-- Keep PR #6 in draft. No merge or production deployment is authorized by this redesign work.
+- `Run` owns the finite work deck, three shared lives, one shared hint, immutable submissions, and validated resume state. It owns the engine-independent `Session` for the current puzzle. Phaser owns Run; React only projects snapshots and owns the mount
+- Keep the exact title 青空パズル and the three works: 吾輩は猫である 4, 檸檬 7, 銀河鉄道の夜 4. Fifteen contiguous, source-verified short excerpts. Natural reading around 20–25 seconds is a soft target, not a forced character cap
+- Normal/hard use authored meaningful divisions of the same text and audio. Counts are guidance, not fixed quotas. Never split particles mechanically, infer difficulty from legacy import thresholds, or restore initial memorization screens
+- Every ordinary join remains provisional with identical feedback. Only a complete one-chain submission judges the exact original order. The correct whole-tile prefix may be revealed by that submission; stop before the first wrong tile, then detach the intact unjudged suffix. No ordinary join exposes correctness
+- Book each submission once before asynchronous audio/animation. Settlement is durable and idempotent. Undo cannot refund lives/hints or cross submission boundaries. No puzzle skipping or re-drawing within a run. All cleared ends the work; zero lives ends the challenge
+- Hints remain explicit successor reveals without joining or camera jumps. Cancellation, unavailable successors, and repeats are free. Keep the existing source/target marks and explicit context navigation
+- Source/original review opens only after run end. A completed puzzle may display the player's assembled text. Resume preserves the board, deck, budgets and pending result, without unlocking source links
+- Use continuous pre-generated Irodori male/female masters. Original text and speech reading are separate. Cues come from known-text alignment and waveform review, never proportional character timestamps. Stop risky unverified cuts with a disclosed visual fallback; do not call uncertain audio boundaries verified
+- Keep audio in audio-assets/, outside public/ and imports. `.vercelignore` excludes it. Runtime has one centralized immutable raw GitHub base URL. Preserve watermark and license/ethical notices. Never commit models, caches or generated font binaries
+- Selection is one paper invitation on the desk, controls are plain and compact, and the paper play area remains primary. No dashboard/bookshelf, fake decorative books or generic scoring layer
+- Existing IndexedDB records stay untouched and read-only. Imports/reimports remain paused. Never migrate, overwrite, decrypt, silently substitute or route archived data into current play
+- Solve content ambiguity editorially; exact original order is the goal, not judging alternative Japanese as incorrect. Layout/DPI/graphemes never change comparison text. No language-model answer judging, approximate acceptance, answer-submit APIs, or parallel DOM game
+- Node built-in tests, typecheck, lint, build and representative play are enough. Do not add permanent browser/seed-sweep CI or network-source tests. Keep executed checks brief in the draft PR; no accumulated screenshots/logs/workflows
+- Implementation and draft PR are authorized; merging or deploying main is not
 
 ## Commands
 
-Node 22; `npm ci`, `npm test`, `npm run lint`, `npm run typecheck`, `npm run build`. `npm run dev` serves port 5678. `AOZORA_API_BASE_URL` belongs to dormant import utilities; it does not enable imports in the current game.
+Node 22; `npm ci`, `npm test`, `npm run lint`, `npm run typecheck`, `npm run build`. Development serves port 5678. `AOZORA_API_BASE_URL` does not enable the paused import flow.

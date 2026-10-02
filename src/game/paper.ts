@@ -1,6 +1,5 @@
 import Phaser from "phaser";
-import { BODY_SIZE, CELL, PAD, layoutManuscript, type ManuscriptLayout } from "./layout.ts";
-import { graphemes } from "./text.ts";
+import { BODY_SIZE, CELL, PAD, layoutManuscript, manuscriptFragmentRanges, type ManuscriptLayout } from "./layout.ts";
 import type { Point } from "./model.ts";
 import type { Bounds } from "./hint-context.ts";
 
@@ -70,11 +69,13 @@ export class Paper extends Phaser.GameObjects.Container {
   private edgeInk: Phaser.GameObjects.Graphics;
   private lifted = false;
   private hintInk: Phaser.GameObjects.Graphics;
+  private readingInk: Phaser.GameObjects.Graphics;
   private fragmentRanges: { start: number; end: number }[];
 
   constructor(scene: Phaser.Scene, text: string, columns: number, fragments: readonly string[] = [text], bonds: readonly boolean[] = []) {
     super(scene, 0, 0);
     this.layout = layoutManuscript(text, columns);
+    this.fragmentRanges = manuscriptFragmentRanges(text, fragments);
     const { width, height, rows } = this.layout;
     this.setSize(width, height);
     const edge = paperEdge(width, height).map(({ x, y }) => new Phaser.Math.Vector2(x, y));
@@ -110,9 +111,8 @@ export class Paper extends Phaser.GameObjects.Container {
     canvas.refresh();
     const ink = scene.add.image(0, 0, this.textureKeys[1]).setOrigin(0).setDisplaySize(width, height);
     const cuts = scene.add.graphics();
-    let offset = 0;
-    fragments.slice(0, -1).forEach((part, boundary) => {
-      offset += graphemes(part).length;
+    fragments.slice(0, -1).forEach((_, boundary) => {
+      const offset = this.fragmentRanges[boundary + 1]?.start;
       if (bonds[boundary]) return;
       const next = this.layout.glyphs.find((glyph) => glyph.index === offset);
       if (!next) return;
@@ -124,12 +124,8 @@ export class Paper extends Phaser.GameObjects.Container {
     this.edgeInk = scene.add.graphics().lineStyle(1.5, GRID).strokePoints(edge, true).setAlpha(0);
     this.outline = scene.add.graphics();
     this.hintInk = scene.add.graphics();
-    let start = 0;
-    this.fragmentRanges = fragments.map((part) => {
-      const end = start + graphemes(part).length;
-      const range = { start, end }; start = end; return range;
-    });
-    this.add([...this.shadows, ground, this.hintInk, grid, ink, cuts, this.edgeInk, this.outline]);
+    this.readingInk = scene.add.graphics();
+    this.add([...this.shadows, ground, this.hintInk, grid, ink, cuts, this.readingInk, this.edgeInk, this.outline]);
     const first = this.layout.glyphs[0];
     const last = this.layout.glyphs[this.layout.glyphs.length - 1];
     this.front = { x: 0, y: first ? first.y + CELL / 2 : height / 2 };
@@ -166,6 +162,33 @@ export class Paper extends Phaser.GameObjects.Container {
       }
     }
   }
+
+  /** Reading ink is independent of hints; all markers are static for low motion. */
+  reading(activeIndex: number, confirmedCount: number, wrongIndex = -1): void {
+    this.readingInk.clear();
+    this.fragmentRanges.forEach((range, index) => {
+      const active = index === activeIndex;
+      if (!active && index >= confirmedCount) return;
+      this.readingInk.fillStyle(active ? 0x375766 : 0x527360, active ? 1 : .72);
+      for (const glyph of this.layout.glyphs) {
+        if (glyph.index >= range.start && glyph.index < range.end) {
+          this.readingInk.fillRect(glyph.x, glyph.y + CELL - (active ? 3 : 1.5), glyph.advance, active ? 3 : 1.5);
+        }
+      }
+    });
+    const range = this.fragmentRanges[wrongIndex];
+    const first = range && this.layout.glyphs.find((glyph) => glyph.index >= range.start && glyph.index < range.end);
+    if (first) {
+      // A bracket at the submitted wrong fragment's start, never at the answer.
+      // Shape as well as color separates a stop from the running underline.
+      this.readingInk.lineStyle(3, 0xa45240, 1);
+      this.readingInk.lineBetween(first.x - 3, first.y + 2, first.x - 3, first.y + CELL - 2);
+      this.readingInk.lineBetween(first.x - 3, first.y + 2, first.x + 5, first.y + 2);
+      this.readingInk.lineBetween(first.x - 3, first.y + CELL - 2, first.x + 5, first.y + CELL - 2);
+    }
+  }
+
+  clearReading(): void { this.readingInk.clear(); }
 
   /** Raise only the cast shadow, leaving text, ports and pointer geometry fixed. */
   lift(animate = true): void {

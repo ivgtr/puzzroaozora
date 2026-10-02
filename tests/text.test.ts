@@ -20,19 +20,27 @@ test("fifteen curated scenes preserve source text and provide atmosphere plus re
     assert.ok(passage.sceneTitle && passage.premise);
     assert.ok(passage.hints.length >= 2 && passage.hints.length <= 3);
     assert.ok(passage.hints.every((hint) => hint.trim().length > 0));
-    assert.ok(passage.fragments.length >= 8 && passage.fragments.length <= 12);
-    assert.ok(passage.fragments.every((fragment) => graphemes(fragment).length >= 3));
-    for (const difficulty of ["easy", "normal", "hard"] as Difficulty[]) assert.doesNotThrow(() => makeProblem(passage, difficulty));
-    console.log(`${passage.id}: ${graphemes(comparisonText(passage.original)).length} characters, ${passage.fragments.length} pieces (${passage.difficulty})`);
+    for (const fragments of [passage.fragments, passage.hardFragments!]) {
+      assert.ok(fragments.length >= 4 && fragments.length <= 12);
+      assert.ok(fragments.every((fragment) => graphemes(fragment).length >= 3));
+      assert.equal(fragments.join(""), comparisonText(passage.original));
+    }
+    for (const difficulty of ["normal", "hard"] as Difficulty[]) {
+      const problem = makeProblem(passage, difficulty);
+      const fragments = difficulty === "hard" ? passage.hardFragments! : passage.fragments;
+      assert.equal(problem.tiles.length, fragments.length);
+      assert.deepEqual(problem.tiles.map(({ text }) => text).sort(), [...fragments].sort());
+      assert.equal(problem.original, passage.original);
+    }
   }
 });
 
-test("lemon's reason and contrast stay together instead of forming independently rotatable sentence groups", () => {
-  const passage = PASSAGES.find((scene) => scene.id === "lemon-shop-v3")!;
-  assert.equal(passage.fragments.length, 8);
-  // Splitting here allowed the shop's prior history to precede that day's purchase.
-  assert.ok(passage.fragments.some((fragment) => fragment.includes("出ていたのだ。檸檬などごくありふれている。がその店というのも")));
-  assert.ok(passage.fragments.includes("珍しい檸檬が"));
+test("both settings use the same short scene and preserve meaningful noun phrases", () => {
+  const passage = PASSAGES.find((scene) => scene.id === "lemon-shop-v4")!;
+  assert.ok(passage.hardFragments!.length > passage.fragments.length);
+  assert.ok(passage.hardFragments!.includes("それからあの丈の詰まった紡錘形の恰好も。――"));
+  assert.ok(passage.original.endsWith("結局私はそれを一つだけ買うことにした。"));
+  assert.equal(makeProblem(passage, "normal").original, makeProblem(passage, "hard").original);
 });
 
 test("graphemes, source line breaks, half-width Latin, and square grid stay separate", () => {

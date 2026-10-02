@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { PASSAGES } from "../src/data/passages.ts";
-import { drawPassage } from "../src/game/questions.ts";
+import { drawPassage, passageOrder } from "../src/game/questions.ts";
 
 test("random questions stay in the selected work and exclude its last excerpt", () => {
   for (const workId of new Set(PASSAGES.map((passage) => passage.workId))) {
@@ -24,4 +24,19 @@ test("random question selection validates its inputs without changing the catalo
   for (const value of [NaN, -1, 1, Infinity]) assert.throws(() => drawPassage(PASSAGES, PASSAGES[0].workId, undefined, () => value), /乱数/);
   assert.equal(drawPassage([PASSAGES[0]], PASSAGES[0].workId, PASSAGES[0].id), PASSAGES[0]);
   assert.deepEqual(PASSAGES, before);
+});
+
+
+test("a run draws a finite permutation of every excerpt exactly once", () => {
+  for (const workId of new Set(PASSAGES.map((passage) => passage.workId))) {
+    const expected = PASSAGES.filter((passage) => passage.workId === workId).map((passage) => passage.id);
+    for (const draw of [0, .5, .999]) {
+      const order = passageOrder(PASSAGES, workId, () => draw);
+      assert.deepEqual([...order].sort(), [...expected].sort());
+      assert.equal(new Set(order).size, expected.length);
+    }
+  }
+  assert.throws(() => passageOrder(PASSAGES, "missing"), /見つかりません/);
+  assert.throws(() => passageOrder([PASSAGES[0], PASSAGES[0]], PASSAGES[0].workId), /重複/);
+  assert.throws(() => passageOrder(PASSAGES, PASSAGES[0].workId, () => NaN), /乱数/);
 });

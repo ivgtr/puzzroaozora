@@ -1,4 +1,4 @@
-import { graphemes } from "./text.ts";
+import { comparisonText, graphemes } from "./text.ts";
 
 export const CELL = 29;
 export const PAD = 14;
@@ -46,5 +46,30 @@ export function dealManuscript(texts: readonly string[], columns: number, viewpo
     x += paper.width + gap;
     rowHeight = Math.max(rowHeight, paper.height);
     return point;
+  });
+}
+
+// Map canonical fragments back onto the displayed manuscript, retaining the
+// original paragraph breaks/indentation. Layout glyph indices are graphemes.
+export function manuscriptFragmentRanges(text: string, fragments: readonly string[]): { start: number; end: number }[] {
+  const chars = graphemes(text.replace(/\r\n?/g, "\n"));
+  const positions: number[] = [];
+  let lineStart = true;
+  chars.forEach((char, index) => {
+    if (char === "\n") { lineStart = true; return; }
+    if (lineStart && (char === " " || char === "　")) return;
+    lineStart = false;
+    positions.push(index);
+  });
+  if (fragments.map(comparisonText).join("") !== comparisonText(text)) {
+    throw new Error("原稿の本文と紙片の区切りが一致しません。");
+  }
+  let offset = 0;
+  return fragments.map((part) => {
+    const length = graphemes(comparisonText(part)).length;
+    const start = positions[offset] ?? chars.length;
+    const end = length ? positions[offset + length - 1] + 1 : start;
+    offset += length;
+    return { start, end };
   });
 }

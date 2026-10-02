@@ -8,7 +8,7 @@ function fixture(fragments = [..."ABCDEFGH"]): CuratedPassage {
 
 function setup(fragments = [..."ABCDEFGH"], begin = true) {
   const problem = makeProblem(fixture(fragments), "easy", () => .5);
-  const session = new Session(problem);
+  const session = new Session(problem, { hintLimit: 3 });
   const positions = problem.tiles.map((_, i) => ({ x: i * 80, y: i * 13 }));
   if (begin) session.begin(positions);
   const tile = (text: string) => {
@@ -131,28 +131,23 @@ test("invalid, removed, and final anchors are unavailable without spending a hin
   }
 });
 
-test("completion blocks hints, Undo preserves spending, and only a new Session resets it", () => {
-  const { session, problem, positions, tile, join, chain } = setup();
+test("completion blocks hints and Undo without resetting spending", () => {
+  const { session, problem, positions, tile, join } = setup();
   session.hintFor(tile("A"));
   let block = "A";
   for (const next of "BCDEFGH") { join(block, next); block += next; }
-  assert.deepEqual(session.hintFor(chain(block)), { kind: "unavailable" });
   assert.equal(session.dispatch({ type: "check" }), "complete");
   const complete = session.state;
-  // A previously cached anchor must not expose a hint on the completion screen.
   assert.deepEqual(session.hintFor(tile("A")), { kind: "unavailable" });
   assert.equal(session.hintsRemaining, 2);
+  assert.equal(session.dispatch({ type: "undo" }), "none");
   assert.equal(session.state, complete);
-  assert.equal(session.dispatch({ type: "undo" }), "undo");
-  assert.equal(session.dispatch({ type: "split", chain: chain(block), boundary: 0 }), "split");
-  assert.deepEqual(session.hintFor(tile("A")), { kind: "revealed", anchorId: tile("A"), targetId: tile("B"), repeated: true });
-  assert.equal(session.hintsRemaining, 2);
   const fresh = new Session(problem);
   fresh.begin(positions);
-  assert.equal(fresh.hintsRemaining, 3);
-  assert.deepEqual(fresh.hintFor(tile("A")), { kind: "revealed", anchorId: tile("A"), targetId: tile("B"), repeated: false });
-  assert.equal(fresh.hintsRemaining, 2);
-  assert.equal(session.hintsRemaining, 2);
+  assert.equal(fresh.hintsRemaining, 1);
+  assert.equal(fresh.hintFor(tile("A")).kind, "revealed");
+  assert.equal(fresh.hintsRemaining, 0);
+  assert.deepEqual(fresh.hintFor(tile("B")), { kind: "exhausted" });
 });
 
 test("identical text never chooses an arbitrary anchor occurrence or target tile", () => {

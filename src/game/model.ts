@@ -7,6 +7,8 @@ export interface CuratedPassage extends Passage {
   readonly sceneTitle: string;
   readonly premise: string;
   readonly hints: readonly string[];
+  readonly hardFragments?: readonly string[];
+  readonly speechReadings?: readonly string[];
 }
 export interface Tile { readonly id: string; readonly text: string }
 export interface Problem extends Omit<CuratedPassage, "fragments"> { readonly tiles: readonly Tile[]; readonly difficulty: Difficulty; readonly version: 3 }
@@ -27,14 +29,19 @@ function hasCuration(passage: Passage | Problem): passage is CuratedPassage | Pr
     && scene.hints.every((hint) => typeof hint === "string" && hint.trim().length > 0);
 }
 function validPieces(pieces: readonly string[]): boolean {
-  return pieces.length >= 8 && pieces.length <= 12 && pieces.every((text) => typeof text === "string" && text.trim().length > 0);
+  return pieces.length >= 4 && pieces.length <= 12 && pieces.every((text) => typeof text === "string" && text.trim().length > 0);
+}
+
+export function fragmentsFor(passage: CuratedPassage, difficulty: Difficulty): readonly string[] {
+  return difficulty === "hard" && passage.hardFragments ? passage.hardFragments : passage.fragments;
 }
 
 export function makeProblem(passage: Passage, difficulty: Difficulty = passage.difficulty, random: () => number = Math.random): Problem {
   if (!hasCuration(passage)) throw new Error("この原稿は新しい遊び方の選定シーンではありません。保存した本は変更していません。");
-  if (!Array.isArray(passage.fragments) || !validPieces(passage.fragments)) throw new Error("選定シーンの紙片は8〜12枚必要です。");
-  if (passage.fragments.join("") !== comparisonText(passage.original)) throw new Error("紙片と原文が一致しません。");
-  const tiles = passage.fragments.map((text) => ({ id: crypto.randomUUID(), text }));
+  const fragments = fragmentsFor(passage, difficulty);
+  if (!Array.isArray(fragments) || !validPieces(fragments)) throw new Error("選定シーンの紙片は4〜12枚必要です。");
+  if (fragments.join("") !== comparisonText(passage.original)) throw new Error("紙片と原文が一致しません。");
+  const tiles = fragments.map((text) => ({ id: crypto.randomUUID(), text }));
   for (let i = tiles.length - 1; i > 0; i--) {
     const draw = random();
     if (!Number.isFinite(draw) || draw < 0 || draw >= 1) throw new Error("紙片を並べる乱数が不正です。");
@@ -126,33 +133,112 @@ export class Session {
   private history: DeskState[] = [];
   private hintTargets?: ReadonlyMap<string, string>;
   private readonly revealedHints = new Map<string, string>();
+  private readonly hintLimit: number;
+  private inputLocked = false;
+  private settledId: string | null = null;
 
-  constructor(problem: Problem) {
+  constructor(problem: Problem, options: { hintLimit?: number } = {}) {
+    this.hintLimit = options.hintLimit ?? 1;
+    if (!Number.isInteger(this.hintLimit) || this.hintLimit < 0 || this.hintLimit > 3) throw new Error("ヒント回数が不正です。");
     this.problem = problem;
     this.tileText = new Map(problem.tiles.map((tile) => [tile.id, tile.text]));
     if (problem.version !== 3 || !hasCuration(problem) || this.tileText.size !== problem.tiles.length || problem.tiles.some((tile) => !tile.id) || !validPieces(problem.tiles.map((tile) => tile.text)) || !canReconstruct(comparisonText(problem.original), problem.tiles.map((tile) => tile.text))) throw new Error("問題の紙片が不正です。");
   }
   get state(): DeskState { return this.current; }
-  get canUndo(): boolean { return this.history.length > 0; }
-  get canCheck(): boolean { return this.current.phase === "assembling" && this.current.chains.length === 1; }
-  get hintsRemaining(): number { return 3 - this.revealedHints.size; }
+  get canUndo(): boolean { return !this.inputLocked && this.current.phase === "assembling" && this.history.length > 0; }
+  get canCheck(): boolean { return !this.inputLocked && this.current.phase === "assembling" && this.current.chains.length === 1; }
+  get hintsRemaining(): number { return this.hintLimit - this.revealedHints.size; }
+  get hintUses(): number { return this.revealedHints.size; }
+  get settledSubmissionId(): string | null { return this.settledId; }
   text(chain: Chain): string { return chain.tiles.map((id) => this.tileText.get(id)!).join(""); }
 
-  hintFor(chainId: string): HintResult {
-    if (this.current.phase !== "assembling") return { kind: "unavailable" };
+  hintFor(chainId: string, remainingBudget = this.hintsRemaining): HintResult {
+    if (this.inputLocked || this.current.phase !== "assembling") return { kind: "unavailable" };
     const chain = this.current.chains.find((candidate) => candidate.id === chainId);
     const anchorId = chain?.tiles.at(-1);
     if (!anchorId) return { kind: "unavailable" };
     const revealed = this.revealedHints.get(anchorId);
     if (revealed) return { kind: "revealed", anchorId, targetId: revealed, repeated: true };
     // Once spent, new requests reveal nothing about whether a successor exists.
-    if (this.hintsRemaining === 0) return { kind: "exhausted" };
+    if (this.hintsRemaining <= 0 || remainingBudget <= 0) return { kind: "exhausted" };
     this.hintTargets ??= unambiguousSuccessors(comparisonText(this.problem.original), this.problem.tiles);
     const targetId = this.hintTargets.get(anchorId);
     if (!targetId) return { kind: "unavailable" };
     // Hint spending is session state, independent of arrangement and Undo.
     this.revealedHints.set(anchorId, targetId);
     return { kind: "revealed", anchorId, targetId, repeated: false };
+  }
+
+  /** Judge only a deliberate full-chain submission; ordinary joins never call this. */
+  judge(): Judgement | null {
+    if (!this.canCheck) return null;
+    const tiles = [...this.current.chains[0].tiles];
+    const tileTexts = tiles.map((id) => this.tileText.get(id)!);
+    const correctPrefix = matchingPrefix(comparisonText(this.problem.original), tileTexts);
+    return { tiles, tileTexts, correctPrefix, correct: correctPrefix === tiles.length,
+      firstWrongTileId: tiles[correctPrefix] ?? null };
+  }
+
+  /** The run locks input while its durable submission is being presented. */
+  lock(): void { this.inputLocked = true; }
+
+  /** Outcomes form an Undo boundary. A suffix is detached once and kept intact. */
+  settle(judgement: Judgement, submissionId: string, suffixPoint?: Point): void {
+    if (suffixPoint && (!Number.isFinite(suffixPoint.x) || !Number.isFinite(suffixPoint.y) || Math.abs(suffixPoint.x) > 1e7 || Math.abs(suffixPoint.y) > 1e7)) throw new Error("分離する紙片の位置が不正です。");
+    if (!validId(submissionId)) throw new Error("読み通しのIDが不正です。");
+    const chain = this.current.chains[0];
+    if (this.current.phase !== "assembling" || this.current.chains.length !== 1 ||
+      chain.tiles.join("\0") !== judgement.tiles.join("\0")) throw new Error("読み通した配置が変わっています。");
+    const texts = chain.tiles.map((id) => this.tileText.get(id)!);
+    const prefix = matchingPrefix(comparisonText(this.problem.original), texts);
+    if (judgement.correctPrefix !== prefix || judgement.correct !== (prefix === texts.length) ||
+      judgement.firstWrongTileId !== (chain.tiles[prefix] ?? null) || !sameTexts(judgement.tileTexts, texts)) throw new Error("読み通しの判定が不正です。");
+    this.history = [];
+    this.settledId = submissionId;
+    this.inputLocked = false;
+    if (judgement.correct) {
+      this.current = { ...this.current, phase: "complete" };
+    } else if (judgement.correctPrefix > 0) {
+      const leftTiles = chain.tiles.slice(0, judgement.correctPrefix);
+      const rightTiles = chain.tiles.slice(judgement.correctPrefix);
+      this.current = { phase: "assembling", chains: [
+        { ...chain, id: leftTiles[0], tiles: leftTiles, bonds: leftTiles.slice(1).map(() => false) },
+        { id: rightTiles[0], tiles: rightTiles, bonds: rightTiles.slice(1).map(() => false), x: suffixPoint?.x ?? chain.x + 56, y: suffixPoint?.y ?? chain.y + 70 },
+      ] };
+    }
+  }
+
+  snapshot(): SessionSnapshot {
+    return { version: 1, passageId: this.problem.id, difficulty: this.problem.difficulty,
+      tiles: this.problem.tiles.map((tile) => ({ ...tile })), state: copyState(this.current),
+      settledSubmissionId: this.settledId, history: this.history.map(copyState), hints: [...this.revealedHints].map(([anchorId, targetId]) => ({ anchorId, targetId })) };
+  }
+
+  static restore(value: unknown, passages: readonly CuratedPassage[], options: { hintLimit?: number } = {}): Session {
+    if (!isRecord(value) || value.version !== 1 || typeof value.passageId !== "string" || !isDifficulty(value.difficulty)) throw new Error("保存した盤面の形式が不正です。");
+    const passage = passages.find((candidate) => candidate.id === value.passageId);
+    if (!passage) throw new Error("保存した問題が現在の選定原稿にありません。");
+    const tiles = validateTiles(value.tiles, fragmentsFor(passage, value.difficulty));
+    const { fragments: _fragments, ...metadata } = passage;
+    void _fragments;
+    const session = new Session({ ...metadata, version: 3, difficulty: value.difficulty, tiles }, options);
+    session.current = validateState(value.state, session.problem);
+    if (value.settledSubmissionId !== null && !validId(value.settledSubmissionId)) throw new Error("保存した読み通しの区切りが不正です。");
+    session.settledId = value.settledSubmissionId as string | null;
+    if (session.current.phase === "reading" && session.settledId) throw new Error("開始前の読み通しが不正です。");
+    if (!Array.isArray(value.history) || value.history.length > 64) throw new Error("保存した操作履歴が不正です。");
+    session.history = value.history.map((state) => validateState(state, session.problem));
+    if (session.history.some((state) => state.phase !== "assembling") ||
+      (session.current.phase !== "assembling" && session.history.length)) throw new Error("保存した操作履歴が不正です。");
+    if (!Array.isArray(value.hints) || value.hints.length > session.hintLimit) throw new Error("保存したヒントが不正です。");
+    const targets = unambiguousSuccessors(comparisonText(passage.original), tiles);
+    for (const hint of value.hints) {
+      if (!isRecord(hint) || typeof hint.anchorId !== "string" || typeof hint.targetId !== "string" ||
+        session.revealedHints.has(hint.anchorId) || targets.get(hint.anchorId) !== hint.targetId) throw new Error("保存したヒントが不正です。");
+      session.revealedHints.set(hint.anchorId, hint.targetId);
+    }
+    if (session.current.phase === "reading" && session.hintUses) throw new Error("開始前のヒントが不正です。");
+    return session;
   }
 
   begin(positions: readonly Point[]): void {
@@ -167,6 +253,7 @@ export class Session {
   }
 
   dispatch(command: Command): JoinEvent {
+    if (this.inputLocked || this.current.phase !== "assembling") return "none";
     if (command.type === "undo") {
       const previous = this.history.pop();
       if (!previous) return "none";
@@ -179,7 +266,8 @@ export class Session {
       if (!this.canCheck) return "none";
       // An unsuccessful reading does not change the arrangement or consume Undo.
       if (this.text(chains[0]) !== comparisonText(this.problem.original)) return "incorrect";
-      this.commit({ ...this.current, phase: "complete" });
+      this.current = { ...this.current, phase: "complete" };
+      this.history = [];
       return "complete";
     }
     if (command.type === "move") {
@@ -211,4 +299,74 @@ export class Session {
     this.commit({ phase: "assembling", chains: next });
     return "tentative";
   }
+}
+
+export interface Judgement {
+  readonly tiles: readonly string[];
+  readonly tileTexts: readonly string[];
+  readonly correctPrefix: number;
+  readonly firstWrongTileId: string | null;
+  readonly correct: boolean;
+}
+export interface SessionSnapshot {
+  readonly version: 1;
+  readonly passageId: string;
+  readonly difficulty: Difficulty;
+  readonly tiles: readonly Tile[];
+  readonly state: DeskState;
+  readonly settledSubmissionId: string | null;
+  readonly history: readonly DeskState[];
+  readonly hints: readonly { readonly anchorId: string; readonly targetId: string }[];
+}
+
+export function matchingPrefix(original: string, texts: readonly string[]): number {
+  let offset = 0;
+  for (let index = 0; index < texts.length; index++) {
+    if (!original.startsWith(texts[index], offset)) return index;
+    offset += texts[index].length;
+  }
+  return texts.length;
+}
+export function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+export function isDifficulty(value: unknown): value is Difficulty {
+  return value === "easy" || value === "normal" || value === "hard";
+}
+export function validId(value: unknown): value is string {
+  return typeof value === "string" && value.length > 0 && value.length <= 128 && !/[\u0000-\u001f]/u.test(value);
+}
+export function sameTexts(actual: readonly string[], expected: readonly string[]): boolean {
+  if (actual.length !== expected.length) return false;
+  const left = [...actual].sort(), right = [...expected].sort();
+  return left.every((text, i) => text === right[i]);
+}
+export function validateTiles(value: unknown, fragments: readonly string[]): Tile[] {
+  if (!Array.isArray(value) || value.length !== fragments.length || value.some((tile) => !isRecord(tile) || !validId(tile.id) || typeof tile.text !== "string")) throw new Error("保存した紙片が不正です。");
+  const tiles = value.map((tile) => ({ id: tile.id as string, text: tile.text as string }));
+  if (new Set(tiles.map((tile) => tile.id)).size !== tiles.length || !sameTexts(tiles.map((tile) => tile.text), fragments)) throw new Error("保存した紙片が現在の選定原稿と一致しません。");
+  return tiles;
+}
+function copyState(state: DeskState): DeskState {
+  return { phase: state.phase, chains: state.chains.map((chain) => ({ ...chain, tiles: [...chain.tiles], bonds: [...chain.bonds] })) };
+}
+function validateState(value: unknown, problem: Problem): DeskState {
+  if (!isRecord(value) || !["reading", "assembling", "complete"].includes(value.phase as string) || !Array.isArray(value.chains) || value.chains.length > problem.tiles.length) throw new Error("保存した配置が不正です。");
+  const chains: Chain[] = value.chains.map((chain) => {
+    if (!isRecord(chain) || !Array.isArray(chain.tiles) || !chain.tiles.length || chain.tiles.some((id) => !validId(id)) ||
+      chain.id !== chain.tiles[0] || !Array.isArray(chain.bonds) || chain.bonds.length !== chain.tiles.length - 1 || chain.bonds.some((bond) => bond !== false) ||
+      typeof chain.x !== "number" || typeof chain.y !== "number" || !Number.isFinite(chain.x) || !Number.isFinite(chain.y) || Math.abs(chain.x) > 1e7 || Math.abs(chain.y) > 1e7) throw new Error("保存した紙片の配置が不正です。");
+    return { id: chain.id as string, tiles: [...chain.tiles] as string[], bonds: [...chain.bonds] as boolean[], x: chain.x, y: chain.y };
+  });
+  if (value.phase === "reading") {
+    if (chains.length) throw new Error("開始前の配置が不正です。");
+  } else {
+    const ids = chains.flatMap((chain) => [...chain.tiles]);
+    if (ids.length !== problem.tiles.length || new Set(ids).size !== ids.length || !sameTexts(ids, problem.tiles.map((tile) => tile.id))) throw new Error("保存した配置に紙片の重複か欠落があります。");
+    if (value.phase === "complete") {
+      const text = new Map(problem.tiles.map((tile) => [tile.id, tile.text]));
+      if (chains.length !== 1 || chains[0].tiles.map((id) => text.get(id)).join("") !== comparisonText(problem.original)) throw new Error("保存した完成原稿が不正です。");
+    }
+  }
+  return { phase: value.phase as DeskState["phase"], chains };
 }

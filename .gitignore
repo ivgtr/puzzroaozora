@@ -11,3 +11,7 @@ next-env.d.ts
 .vercel/
 .DS_Store
 npm-debug.log*
+
+# Local Python cache from offline narration preparation
+__pycache__/
+*.pyc
