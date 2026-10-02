@@ -18,7 +18,16 @@ export interface Chain extends Point { readonly id: string; readonly tiles: read
 export interface DeskState { readonly phase: "reading" | "assembling" | "complete"; readonly chains: readonly Chain[] }
 export type JoinEvent = "none" | "move" | "split" | "tentative" | "incorrect" | "complete" | "undo";
 export type HintResult = { readonly kind: "revealed"; readonly anchorId: string; readonly targetId: string; readonly repeated: boolean } | { readonly kind: "unavailable" | "exhausted" };
-export type Command = { type: "join"; source: string; target: string; side: "before" | "after" } | { type: "split"; chain: string; boundary: number } | { type: "move"; chain: string; point: Point } | { type: "check" } | { type: "undo" };
+export type Command = { type: "join"; source: string; target: string; side: "before" | "after" } | { type: "split"; chain: string; boundary: number } | { type: "detach"; chain: string; tile: string; positions: readonly Point[] } | { type: "move"; chain: string; point: Point } | { type: "check" } | { type: "undo" };
+
+/** Remove only the touched fragment's adjacent joins; never join its neighbours. */
+export function detachedChains(chain: Chain, tile: string): Chain[] {
+  const at = chain.tiles.indexOf(tile);
+  if (at < 0 || chain.tiles.length < 2) return [];
+  return [[0, at], [at, at + 1], [at + 1, chain.tiles.length]].filter(([start, end]) => start < end).map(([start, end]) => ({
+    ...chain, id: chain.tiles[start], tiles: chain.tiles.slice(start, end), bonds: chain.bonds.slice(start, end - 1),
+  }));
+}
 
 function hasCuration(passage: Passage | Problem): passage is CuratedPassage | Problem {
   const scene = passage as Partial<CuratedPassage>;
@@ -276,6 +285,14 @@ export class Session {
       if (!chain || !Number.isFinite(x) || !Number.isFinite(y) || (chain.x === x && chain.y === y)) return "none";
       this.commit({ ...this.current, chains: chains.map((c) => c === chain ? { ...c, x, y } : c) });
       return "move";
+    }
+    if (command.type === "detach") {
+      const chain = chains.find((c) => c.id === command.chain);
+      const parts = chain ? detachedChains(chain, command.tile) : [];
+      if (!parts.length || command.positions.length !== parts.length || command.positions.some(({ x, y }) => !Number.isFinite(x) || !Number.isFinite(y))) return "none";
+      const detached = parts.map((part, index) => ({ ...part, ...command.positions[index] }));
+      this.commit({ phase: "assembling", chains: chains.flatMap((c) => c === chain ? detached : [c]) });
+      return "split";
     }
     if (command.type === "split") {
       const chain = chains.find((c) => c.id === command.chain);

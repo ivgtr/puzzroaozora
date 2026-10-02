@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { Session, makeProblem, type CuratedPassage } from "../src/game/model.ts";
+import { detachedPositions, layoutManuscript } from "../src/game/layout.ts";
 
 function start(fragments = [..."ABCD"]) {
   const passage: CuratedPassage = {
@@ -51,6 +52,25 @@ test("invalid edits leave the board and its Undo history untouched", () => {
   assert.equal(session.dispatch({ type: "check" }), "none");
   assert.deepEqual(session.state, before);
   assert.equal(session.canUndo, false);
+});
+
+test("detaching a middle fragment keeps both neighbours intact and takes one Undo", () => {
+  const { session, id, join } = start();
+  join("A", "B"); join("AB", "C"); join("ABC", "D");
+  const before = session.state, chain = before.chains[0];
+  const obstacle = { x: chain.x, y: chain.y + 80, width: 200, height: 180 };
+  const sizes = ["A", "B", "CD"].map((text) => layoutManuscript(text, 8));
+  const positions = detachedPositions(sizes, chain, [obstacle]);
+  assert.equal(session.dispatch({ type: "detach", chain: id("ABCD"), tile: chain.tiles[1], positions }), "split");
+  assert.deepEqual(session.state.chains.map((part) => session.text(part)), ["A", "B", "CD"]);
+  assert.deepEqual(session.state.chains.flatMap((part) => part.tiles), chain.tiles);
+  assert.deepEqual(session.state.chains.map((part) => part.bonds.length), [0, 0, 1]);
+  positions.forEach((point, index) => {
+    assert.ok(point.y + sizes[index].height <= obstacle.y || point.y >= obstacle.y + obstacle.height);
+    if (index) assert.ok(point.y >= positions[index - 1].y + sizes[index - 1].height + 24);
+  });
+  assert.equal(session.dispatch({ type: "undo" }), "undo");
+  assert.deepEqual(session.state, before);
 });
 
 test("identical text is interchangeable for completion but never an arbitrary hint", () => {

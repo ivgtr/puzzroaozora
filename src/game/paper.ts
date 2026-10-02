@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { BODY_SIZE, CELL, PAD, layoutManuscript, manuscriptFragmentRanges, type ManuscriptLayout } from "./layout.ts";
+import { BODY_SIZE, CELL, PAD, fragmentAt, layoutManuscript, manuscriptFragmentRanges, type ManuscriptLayout } from "./layout.ts";
 import type { Point } from "./model.ts";
 import type { Bounds } from "./hint-context.ts";
 
@@ -138,6 +138,8 @@ export class Paper extends Phaser.GameObjects.Container {
     this.outline.clear();
     if (selected || focused) this.outline.lineStyle(focused ? 1.5 : 1.2, selected ? 0x947050 : 0x65796a, .78).strokePoints(this.edge, true);
   }
+
+  fragmentAt(point: Point): number { return fragmentAt(this.layout, this.fragmentRanges, { x: point.x - this.x, y: point.y - this.y }); }
 
   fragmentBounds(fragmentIndex: number): (Bounds & { first: Bounds }) | undefined {
     const range = this.fragmentRanges[fragmentIndex];

@@ -5,11 +5,12 @@ import { NarrationPlayer, NARRATION_MESSAGES, type NarrationState } from "./narr
 import { NARRATION, type NarrationVoice } from "../data/narration.ts";
 import { hintExcerpt, revealOffset } from "./hint-context.ts";
 import { deskViewport, insideBoard, constrainPointer } from "./viewport.ts";
+import { primaryPress, TouchTaps } from "./gestures.ts";
 
 import { readBooks, type LibraryBook } from "../lib/books.ts";
-import { type Chain, type Command, type Point, type CuratedPassage } from "./model.ts";
+import { detachedChains, type Chain, type Command, type Point, type CuratedPassage } from "./model.ts";
 import { comparisonText, graphemes, type Difficulty } from "./text.ts";
-import { CELL, dealManuscript, layoutManuscript } from "./layout.ts";
+import { CELL, dealManuscript, detachedPositions, layoutManuscript } from "./layout.ts";
 import { prepareFont, prepareText } from "./fonts.ts";
 import { Paper, PAPER, MAT } from "./paper.ts";
 import { playCue, prepareSounds } from "./sound.ts";
@@ -17,7 +18,7 @@ import type { DeskSnapshot, HostBridge } from "./bridge.ts";
 
 const WORKS = PASSAGES.filter((passage, index) => PASSAGES.findIndex((other) => other.workId === passage.workId) === index);
 
-export const UI_TEXT = Object.values(NARRATION_MESSAGES).join("") + `再試行 朗読を再試行 ライフ 片 別のタブで挑戦が更新されました。ここから再開できます。別のタブの更新を読み込めません。このタブを読み直してください。 前の結果を見る 原文の順序をどこまで思い出せるか 挑戦全体 細かめ ふつう 中断した挑戦を再開 挑戦を中断・終了する 今回の結果へ戻る ライフ 読み通しています 確認済みを早送り ここで途切れました ここから先は未判定です 読み通せました 前の抜粋を読み返す 次の抜粋を読み返す 停止 聴く この作品を読み通しました ここまで読み通せました 問クリア 今回の挑戦 続きを聴く 読み返す もう一度挑む 朗読の声 女性 男性 紙片の細かさ 合成音声 Irodori-TTS v4.1 Small 新しい挑戦を始めますか 中断した挑戦は終了します 新しい挑戦は3ライフ・ヒント1回で始まります 中断しても盤面・ライフ・ヒントはこの端末に残ります 原文と出典は挑戦を終えた後に読めます 中断して戻る 挑戦を終える 新しく始める すべての紙片を一つにつないでください 片目で途切れました 離れた塊の中は未判定です この端末では設定を保存できません 設定を読み込めません 挑戦を保存できません この画面を閉じると再開できない場合があります 保存した挑戦を読み込めません 新しい挑戦を始められます 青空文庫の原文 誤答でライフが1減ります 原文の順序を復元しましょう  隠す ヒントを隠す。紙片の印は残ります ヒントを見る。選んだ紙片と続き ヒントを隠す ヒントを見る 通知を閉じる 紙片を選ぶ ヒントを閉じても印は残ります。 切れ目で分離。Zで元に戻す。 選んだ紙片を見る 続きを見る 緑の下線が選んだ紙片、黄色が続きです。画面下の一節を押すとその場所へ移動できます。 ヒント 残り 回 取消 次の問題 ランダム出題 読む手掛かり 続きを知りたい紙片を選ぶ。塊は末尾が対象です。 色のついた部分が続きです。自動ではつなぎません。 前に見たヒントです。 続きを表示できません。別の紙片を選んでください。 残り0回です。前に見た紙片は再表示できます。 ヒントは挑戦全体で1回。取消・再表示は減りません。 誤答でライフが1減ります。原文の順序を復元しましょう。 同じ作品の別の抜粋をランダムに出題します。 問からランダムに出題 ヒントで続きを表示した紙片だけ色がつきます。 作品を選ぶ 作品選択に戻る パズルを続ける パズルを始める すべての紙片を表示 原稿全体を表示 音量を下げる 音量を上げる 消音を解除 消音にする 紙片をひろげる 遊び方 読了 枚の紙片 ↗ 青空パズル つなぐ 手掛かり 読み通す 別の情景 同じ情景 もう一度 つながりを見直す 原文 出典を読む 全体表示 元に戻す 遊び方 設定 閉じる 保存した本 作品の取り込みは休止しています。保存データはそのまま残っています。新しいルールでは、手で選び直した3作品の抜粋で遊べます。 作品選択に戻りますか 途中の配置は保存されません。 続ける 選び直す 一枚の原稿になりました。 紙片を選び、相手の端へ 余白を動かすと、ほかの紙片が見つかります 左端が前、右端が後。選んだ紙片をつなぎます。 切れ目をタップして、いつでも外せます。 つながりを作りました。 つながりを外しました。 一つ前の操作に戻しました。 原文とは、まだ少し違うようです。切れ目を外して読み直してみましょう。 ひとつにつながりました。読み通して確かめましょう。 音量 小 大 音なし 動きを控える 有効 無効 このブラウザでは音を利用できません。 紙片をドラッグして、相手の端へ。 紙片を選んでから相手の端をタップしてもつながります。 正誤は最後に読み通すまで分かりません。 選んだ紙片の切れ目をタップすると外せます。 余白をドラッグして移動。二本指・ホイールで拡大縮小。 矢印で移動、Enterで選択、[ と ]で前後へ。 Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。 次の手掛かり 前へ 次へ 準備中です。 読み込めませんでした。 読み込みを完了できませんでした。 段落の順序を確かめる 紙片 残り 組 つながり 確認 正解の場所は示しません まだ保存した本はありません。 記録 この三問は手作業で選んだ抜粋です。 答えは、つなぎ終えたあとに。 選択した紙片を前につなぐ 選択した紙片を後につなぐ 番目の切れ目を外す 01 02 03 / · ← → ＋ − × … ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789[]()%「」、。`;
+export const UI_TEXT = Object.values(NARRATION_MESSAGES).join("") + `再試行 朗読を再試行 ライフ 片 別のタブで挑戦が更新されました。ここから再開できます。別のタブの更新を読み込めません。このタブを読み直してください。 前の結果を見る 原文の順序をどこまで思い出せるか 挑戦全体 細かめ ふつう 中断した挑戦を再開 挑戦を中断・終了する 今回の結果へ戻る ライフ 読み通しています 確認済みを早送り ここで途切れました ここから先は未判定です 読み通せました 前の抜粋を読み返す 次の抜粋を読み返す 停止 聴く この作品を読み通しました ここまで読み通せました 問クリア 今回の挑戦 続きを聴く 読み返す もう一度挑む 朗読の声 女性 男性 紙片の細かさ 合成音声 Irodori-TTS v4.1 Small 新しい挑戦を始めますか 中断した挑戦は終了します 新しい挑戦は3ライフ・ヒント1回で始まります 中断しても盤面・ライフ・ヒントはこの端末に残ります 原文と出典は挑戦を終えた後に読めます 中断して戻る 挑戦を終える 新しく始める すべての紙片を一つにつないでください 片目で途切れました 離れた塊の中は未判定です この端末では設定を保存できません 設定を読み込めません 挑戦を保存できません この画面を閉じると再開できない場合があります 保存した挑戦を読み込めません 新しい挑戦を始められます 青空文庫の原文 誤答でライフが1減ります 原文の順序を復元しましょう  隠す ヒントを隠す。紙片の印は残ります ヒントを見る。選んだ紙片と続き ヒントを隠す ヒントを見る 通知を閉じる 紙片を選ぶ ヒントを閉じても印は残ります。 PCは右クリック、スマホはダブルタップで紙片を外します。 選んだ紙片を見る 続きを見る 緑の下線が選んだ紙片、黄色が続きです。画面下の一節を押すとその場所へ移動できます。 ヒント 残り 回 取消 次の問題 ランダム出題 読む手掛かり 続きを知りたい紙片を選ぶ。塊は末尾が対象です。 色のついた部分が続きです。自動ではつなぎません。 前に見たヒントです。 続きを表示できません。別の紙片を選んでください。 残り0回です。前に見た紙片は再表示できます。 ヒントは挑戦全体で1回。取消・再表示は減りません。 誤答でライフが1減ります。原文の順序を復元しましょう。 同じ作品の別の抜粋をランダムに出題します。 問からランダムに出題 ヒントで続きを表示した紙片だけ色がつきます。 作品を選ぶ 作品選択に戻る パズルを続ける パズルを始める すべての紙片を表示 原稿全体を表示 音量を下げる 音量を上げる 消音を解除 消音にする 紙片をひろげる 遊び方 読了 枚の紙片 ↗ 青空パズル つなぐ 手掛かり 読み通す 別の情景 同じ情景 もう一度 つながりを見直す 原文 出典を読む 全体表示 元に戻す 遊び方 設定 閉じる 保存した本 作品の取り込みは休止しています。保存データはそのまま残っています。新しいルールでは、手で選び直した3作品の抜粋で遊べます。 作品選択に戻りますか 途中の配置は保存されません。 続ける 選び直す 一枚の原稿になりました。 紙片を選び、相手の端へ 余白を動かすと、ほかの紙片が見つかります 左端が前、右端が後。選んだ紙片をつなぎます。 右クリック・ダブルタップで紙片を外せます。 つながりを作りました。 つながりを外しました。 一つ前の操作に戻しました。 原文とは、まだ少し違うようです。紙片を外して読み直してみましょう。 ひとつにつながりました。読み通して確かめましょう。 音量 小 大 音なし 動きを控える 有効 無効 このブラウザでは音を利用できません。 紙片をドラッグして、相手の端へ。 紙片を選んでから相手の端をタップしてもつながります。 正誤は最後に読み通すまで分かりません。 外したい紙片を、PCは右クリック、スマホはダブルタップ。 余白をドラッグして移動。二本指・ホイールで拡大縮小。 矢印で移動、Enterで選択、[ と ]で前後へ。 Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。 次の手掛かり 前へ 次へ 準備中です。 読み込めませんでした。 読み込みを完了できませんでした。 段落の順序を確かめる 紙片 残り 組 つながり 確認 正解の場所は示しません まだ保存した本はありません。 記録 この三問は手作業で選んだ抜粋です。 答えは、つなぎ終えたあとに。 選択した紙片を前につなぐ 選択した紙片を後につなぐ 番目の切れ目を外す 01 02 03 / · ← → ＋ − × … ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789[]()%「」、。`;
 
 type Overlay = "settings" | "leave" | "replace" | "books" | "help" | "hint";
 const SAVE_KEY = "aozora-puzzle-run-v1";
@@ -74,6 +75,7 @@ export class DeskScene extends Phaser.Scene {
   private selected?: string;
   private focused?: string;
   private gesture?: Gesture;
+  private touchTaps = new TouchTaps();
   private target?: Target;
   private pinch?: { distance: number; zoom: number; world: Point };
   private suppressRelease = false;
@@ -139,6 +141,7 @@ export class DeskScene extends Phaser.Scene {
     this.game.canvas.addEventListener("keydown", this.onKey);
     this.game.canvas.addEventListener("pointercancel", this.cancelGesture);
     this.game.canvas.addEventListener("touchcancel", this.cancelGesture);
+    this.game.canvas.addEventListener("contextmenu", this.onContextMenu);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.shutdown, this);
     this.resize();
     void this.loadBooks();
@@ -158,6 +161,7 @@ export class DeskScene extends Phaser.Scene {
     this.game.canvas.removeEventListener("keydown", this.onKey);
     this.game.canvas.removeEventListener("pointercancel", this.cancelGesture);
     this.game.canvas.removeEventListener("touchcancel", this.cancelGesture);
+    this.game.canvas.removeEventListener("contextmenu", this.onContextMenu);
     this.views.clear();
   }
 
@@ -218,16 +222,17 @@ export class DeskScene extends Phaser.Scene {
     if (accent) shape.fillStyle(0x354c42).fillRoundedRect(0, 0, width, height, height / 2);
     const label = this.add.text(width / 2, height / 2, text, { fontFamily: "DeskSans", fontSize: width < 70 ? "13px" : "14px", color: accent ? "#faf5e7" : "#4c5c50", align: "center" }).setOrigin(.5).setResolution(Math.min(2, devicePixelRatio || 1));
     container.add([shape, label]).setInteractive(new Phaser.Geom.Rectangle(0, 0, width, height), Phaser.Geom.Rectangle.Contains);
-    let armed = false;
+    let armed: number | undefined;
     container.on("pointerover", () => { label.setAlpha(.65); this.game.canvas.style.cursor = "pointer"; });
-    container.on("pointerdown", () => { armed = true; label.y = height / 2 + 1; this.game.canvas.focus({ preventScroll: true }); });
-    container.on("pointerout", () => { armed = false; label.y = height / 2; label.setAlpha(1); this.game.canvas.style.cursor = "default"; });
-    container.on("pointerup", () => { label.y = height / 2; if (armed) { armed = false; this.dispatch(id); } });
+    container.on("pointerdown", (pointer: Phaser.Input.Pointer) => { armed = primaryPress(pointer) && this.touching().length <= 1 ? pointer.id : undefined; if (armed !== undefined) { label.y = height / 2 + 1; this.game.canvas.focus({ preventScroll: true }); } });
+    container.on("pointerout", () => { armed = undefined; label.y = height / 2; label.setAlpha(1); this.game.canvas.style.cursor = "default"; });
+    container.on("pointerup", (pointer: Phaser.Input.Pointer) => { label.y = height / 2; const activate = armed === pointer.id && !pointer.wasCanceled && !this.suppressRelease && (pointer.wasTouch || pointer.button === 0); armed = undefined; if (activate) this.dispatch(id); });
     this.hud.add(container);
   }
 
   dispatch(id: string): void {
     if (this.busy || !this.alive) return;
+    this.touchTaps.cancel();
     if (id.startsWith("piece:")) {
       if (!this.canEdit || this.overlay) return;
       if (this.hintSelecting) { this.revealHint(id.slice(6)); return; }
@@ -312,11 +317,11 @@ export class DeskScene extends Phaser.Scene {
     const bounds = new Phaser.Geom.Rectangle(x, y, width, height);
     this.actions.set(id, { label: `『${passage.title}』の${count}問からランダムに始める`, invoke: () => { this.requestStartWork(passage.workId); }, bounds });
     const sheet = this.add.zone(x, y, width, height).setOrigin(0).setInteractive();
-    let armed = false;
+    let armed: number | undefined;
     sheet.on("pointerover", () => { this.game.canvas.style.cursor = "pointer"; });
-    sheet.on("pointerdown", () => { armed = true; this.game.canvas.focus({ preventScroll: true }); });
-    sheet.on("pointerout", () => { armed = false; this.game.canvas.style.cursor = "default"; });
-    sheet.on("pointerup", () => { if (armed) { armed = false; this.dispatch(id); } });
+    sheet.on("pointerdown", (pointer: Phaser.Input.Pointer) => { armed = primaryPress(pointer) && this.touching().length <= 1 ? pointer.id : undefined; if (armed !== undefined) this.game.canvas.focus({ preventScroll: true }); });
+    sheet.on("pointerout", () => { armed = undefined; this.game.canvas.style.cursor = "default"; });
+    sheet.on("pointerup", (pointer: Phaser.Input.Pointer) => { const activate = armed === pointer.id && !pointer.wasCanceled && !this.suppressRelease && (pointer.wasTouch || pointer.button === 0); armed = undefined; if (activate) this.dispatch(id); });
     this.hud.add(sheet);
     const navY = y + height + 16;
     const navWidth = Math.min(390, this.w - 40);
@@ -488,12 +493,12 @@ export class DeskScene extends Phaser.Scene {
     } else if (this.overlay === "help") {
       this.label("遊び方", x + 28, y + 28, 25, 0, "#354b40", true);
       const instructions = short ? `紙片をドラッグして相手の端へ。選んでから端をタップしてもつながります。
-切れ目で分離。Zで元に戻す。
+PCは右クリック、スマホはダブルタップで紙片を外します。
 ヒントは挑戦全体で1回。取消・再表示は減りません。
 余白をドラッグして移動。二本指・ホイールで拡大縮小。` : `紙片をドラッグして、相手の端へ。
 紙片を選んでから相手の端をタップしてもつながります。
 
-選んだ紙片の切れ目をタップすると外せます。
+外したい紙片を、PCは右クリック、スマホはダブルタップ。
 
 ヒントは挑戦全体で1回。取消・再表示は減りません。
 誤答でライフが1減ります。原文の順序を復元しましょう。
@@ -540,7 +545,7 @@ Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。`, x + 28, b
       else if (this.session.state.phase === "complete") snapshot.description = "読み通せました。次の問題へ進めます。";
     }
     if (this.overlay === "hint") snapshot.description = this.session!.problem.hints[this.hintIndex];
-    if (this.overlay === "help") snapshot.description = "紙片をドラッグして相手の端へ。選んでから端をタップしてもつながります。すべて仮組みで、切れ目を外せます。全部つないで読み通すと原文の順序を確かめます。誤答でライフが1減り、正しかった先頭だけが分かります。ヒントは挑戦全体で1回。取消・再表示は減りません。次問や元に戻すで回復しません。余白をドラッグして移動。二本指・ホイールで拡大縮小。";
+    if (this.overlay === "help") snapshot.description = "紙片をドラッグして相手の端へ。選んでから端をタップしてもつながります。外したい紙片を、PCは右クリック、スマホはダブルタップ。元に戻すで取り消せます。全部つないで読み通すと原文の順序を確かめます。誤答でライフが1減り、正しかった先頭だけが分かります。ヒントは挑戦全体で1回。取消・再表示は減りません。次問や元に戻すで回復しません。余白をドラッグして移動。二本指・ホイールで拡大縮小。";
     if (this.overlay === "books") snapshot.description = "作品の取り込みは休止しています。保存データはそのまま残っています。" + this.saved.map((book) => `${book.title}・${book.author}`).join("。 ");
     if (this.overlay === "leave") snapshot.description = "中断しても盤面・ライフ・ヒントは残ります。原文と出典は挑戦を終えた後に読めます。";
     this.bridge.publish(snapshot);
@@ -932,8 +937,9 @@ Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。`, x + 28, b
     if (command.type === "join") {
       this.selected = this.session.state.chains.find((chain) => chain.id === command.target || chain.id === command.source)?.id;
       this.focused = this.selected;
-    } else if (command.type === "undo") { this.selected = undefined; this.focused = undefined; }
-    this.notice = event === "incorrect" ? "原文とは、まだ少し違うようです。切れ目を外して読み直してみましょう。" : event === "split" ? "つながりを外しました。" : event === "undo" ? "一つ前の操作に戻しました。" : event === "complete" ? "一枚の原稿になりました。" : "";
+    } else if (command.type === "detach") { this.selected = command.tile; this.focused = command.tile; }
+    else if (command.type === "undo") { this.selected = undefined; this.focused = undefined; }
+    this.notice = event === "incorrect" ? "原文とは、まだ少し違うようです。紙片を外して読み直してみましょう。" : event === "split" ? "つながりを外しました。" : event === "undo" ? "一つ前の操作に戻しました。" : event === "complete" ? "一枚の原稿になりました。" : "";
     this.syncPaper();
     if (event === "complete") this.readingCamera();
     else if (wasComplete && event === "undo") this.overview();
@@ -994,7 +1000,7 @@ Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。`, x + 28, b
     this.boardCamera.preRender();
     return insideBoard(this.boardCamera, this.boardCamera.matrixCombined.transformPoint(point.x, point.y), 15);
   }
-  private touching(): Phaser.Input.Pointer[] { return this.input.manager.pointers.filter((pointer) => pointer.isDown && this.onBoard(pointer)); }
+  private touching(): Phaser.Input.Pointer[] { return this.input.manager.pointers.filter((pointer) => pointer.wasTouch && pointer.isDown); }
   private hitPaper(point: Point): { id: string; paper: Paper } | undefined {
     const views = [...this.views].sort((a, b) => this.world.getIndex(b[1].paper) - this.world.getIndex(a[1].paper));
     for (const [id, view] of views) if (point.x >= view.paper.x && point.x <= view.paper.x + view.paper.width && point.y >= view.paper.y && point.y <= view.paper.y + view.paper.height) return { id, paper: view.paper };
@@ -1015,24 +1021,52 @@ Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。`, x + 28, b
     return nearest;
   }
 
+  private detach(chainId: string, tile: string): void {
+    if (!this.canEdit || !this.session || this.overlay || this.hintSelecting) return;
+    const chain = this.session.state.chains.find((chain) => chain.id === chainId);
+    const parts = chain && detachedChains(chain, tile);
+    if (!chain || !parts?.length) return;
+    const sizes = parts.map((part) => layoutManuscript(this.session!.text(part), this.columns));
+    const obstacles = [...this.views].filter(([id]) => id !== chainId).map(([, { paper }]) => ({ x: paper.x, y: paper.y, width: paper.width, height: paper.height }));
+    this.apply({ type: "detach", chain: chainId, tile, positions: detachedPositions(sizes, chain, obstacles) });
+  }
+
+  private onContextMenu = (event: MouseEvent): void => { event.preventDefault(); };
+
   private onDown(pointer: Phaser.Input.Pointer): void {
-    if (this.overlay || this.busy || !this.session || !this.onBoard(pointer)) return;
-    this.game.canvas.focus({ preventScroll: true });
     const touches = this.touching();
     if (touches.length >= 2) {
       this.cancelGesture();
       this.suppressRelease = true;
+      if (this.overlay || this.busy || !this.session || !touches.every((touch) => this.onBoard(touch))) return;
       const [a, b] = touches;
       this.pinch = { distance: Phaser.Math.Distance.Between(a.x, a.y, b.x, b.y), zoom: this.boardCamera.zoom, world: this.worldPoint({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }) };
       return;
     }
+    if (!primaryPress(pointer)) {
+      const interrupted = !!this.gesture || this.suppressRelease || touches.length > 0;
+      this.cancelGesture();
+      if (interrupted || pointer.buttons !== 2 || this.overlay || this.busy || !this.canEdit || this.hintSelecting || !this.onBoard(pointer)) return;
+      const point = this.worldPoint(pointer), hit = this.hitPaper(point);
+      const chain = hit && this.session!.state.chains.find((chain) => chain.id === hit.id);
+      const tile = hit && chain?.tiles[hit.paper.fragmentAt(point)];
+      if (hit && tile) { this.game.canvas.focus({ preventScroll: true }); this.detach(hit.id, tile); }
+      return;
+    }
+    if (this.suppressRelease) return;
+    if (this.overlay || this.busy || !this.session || !this.onBoard(pointer)) { this.touchTaps.cancel(); return; }
+    this.game.canvas.focus({ preventScroll: true });
+    if (!pointer.wasTouch || this.hintSelecting) this.touchTaps.cancel();
     this.suppressRelease = false;
     const point = this.worldPoint(pointer);
     if (this.canEdit) {
       const target = this.selected && !this.hintSelecting ? this.tapTarget(point) : undefined;
-      if (target) { this.target = target; this.gesture = { kind: "pan", down: { x: pointer.x, y: pointer.y }, scroll: { x: this.boardCamera.scrollX, y: this.boardCamera.scrollY } }; return; }
+      if (target) { this.touchTaps.cancel(); this.target = target; this.gesture = { kind: "pan", down: { x: pointer.x, y: pointer.y }, scroll: { x: this.boardCamera.scrollX, y: this.boardCamera.scrollY } }; return; }
       const hit = this.hitPaper(point);
       if (hit) {
+        const tile = this.session.state.chains.find((chain) => chain.id === hit.id)?.tiles[hit.paper.fragmentAt(point)];
+        if (pointer.wasTouch && tile && !this.hintSelecting) this.touchTaps.start(tile, pointer, pointer.downTime);
+        else this.touchTaps.cancel();
         this.gesture = { kind: "paper", id: hit.id, down: { x: pointer.x, y: pointer.y }, offset: { x: point.x - hit.paper.x, y: point.y - hit.paper.y }, moved: false };
         this.tweens.killTweensOf(hit.paper); hit.paper.setAlpha(1); hit.paper.lift(!this.reduced);
         this.world.bringToTop(hit.paper); this.world.bringToTop(this.ports);
@@ -1040,10 +1074,12 @@ Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。`, x + 28, b
         return;
       }
     }
+    this.touchTaps.cancel();
     this.gesture = { kind: "pan", down: { x: pointer.x, y: pointer.y }, scroll: { x: this.boardCamera.scrollX, y: this.boardCamera.scrollY } };
   }
 
   private onMove(pointer: Phaser.Input.Pointer): void {
+    if (pointer.wasTouch) this.touchTaps.move(pointer);
     if (this.overlay || this.busy) return;
     if (this.pinch) {
       const touches = this.touching();
@@ -1107,6 +1143,8 @@ Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。`, x + 28, b
   }
 
   private onUp(pointer: Phaser.Input.Pointer): void {
+    if (pointer.wasCanceled) { this.cancelGesture(); return; }
+    if (!pointer.wasTouch && pointer.button !== 0) return;
     if (this.pinch || this.suppressRelease) {
       if (this.touching().length < 2) this.pinch = undefined;
       if (this.touching().length === 0) this.suppressRelease = false;
@@ -1125,7 +1163,7 @@ Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。`, x + 28, b
       return;
     }
     const view = this.views.get(gesture.id)!;
-    if (this.hintSelecting) { this.revealHint(gesture.id, pointer); return; }
+    if (this.hintSelecting) { this.touchTaps.cancel(); this.revealHint(gesture.id, pointer); return; }
     if (gesture.moved) {
       const target = this.target;
       const position = { x: view.paper.x, y: view.paper.y };
@@ -1135,12 +1173,13 @@ Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。`, x + 28, b
       return;
     }
     const point = this.worldPoint(pointer);
-    const seam = view.paper.seams.find((seam) => this.visiblePort({ x: view.paper.x + seam.x, y: view.paper.y + seam.y }) && Phaser.Math.Distance.Between(point.x, point.y, view.paper.x + seam.x, view.paper.y + seam.y) * this.boardCamera.zoom <= 19);
-    if (this.selected === gesture.id && seam) this.apply({ type: "split", chain: gesture.id, boundary: seam.boundary });
+    const tile = this.session.state.chains.find((chain) => chain.id === gesture.id)?.tiles[view.paper.fragmentAt(point)];
+    if (pointer.wasTouch && this.touchTaps.end(tile, pointer, pointer.upTime) && tile) this.detach(gesture.id, tile);
     else { this.clearHint(); this.notice = ""; this.selected = gesture.id; this.focused = gesture.id; this.syncSelection(); this.render(); }
   }
 
   private cancelGesture = (): void => {
+    this.touchTaps.cancel();
     if (this.game?.canvas) this.game.canvas.style.cursor = "default";
     const gesture = this.gesture;
     if (gesture?.kind === "paper" && this.session) {
@@ -1148,7 +1187,7 @@ Deleteで分離、Zで元に戻す、Hで遊び方、Escで取消。`, x + 28, b
       const view = stable && this.views.get(stable.id);
       if (stable && view) { view.paper.setPosition(stable.x, stable.y); view.paper.settle(false); }
     }
-    this.gesture = undefined; this.pinch = undefined; this.target = undefined;
+    this.gesture = undefined; this.pinch = undefined; this.target = undefined; this.suppressRelease = false;
     if (this.ports) this.syncSelection();
   };
 

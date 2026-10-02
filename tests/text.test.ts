@@ -1,14 +1,21 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { comparisonText, graphemes } from "../src/game/text.ts";
-import { layoutManuscript } from "../src/game/layout.ts";
+import { fragmentAt, layoutManuscript, manuscriptFragmentRanges } from "../src/game/layout.ts";
 import { cleanAozora } from "../src/lib/aozora.ts";
 
 test("comparison removes paragraph layout without normalizing spelling, punctuation, or inner spaces", () => {
   assert.equal(comparisonText("　舊字、ABC ＡＢＣ。\r\n　が𠮷。"), "舊字、ABC ＡＢＣ。が𠮷。");
   assert.deepEqual(graphemes("が𠮷👨‍👩‍👧"), ["が", "𠮷", "👨‍👩‍👧"]);
   const text = "「𠮷がABC、小っ。」\n旧かな。";
-  assert.equal(layoutManuscript(text, 8).glyphs.map((glyph) => glyph.text).join(""), text.replace(/\n/g, ""));
+  const layout = layoutManuscript(text, 8);
+  assert.equal(layout.glyphs.map((glyph) => glyph.text).join(""), text.replace(/\n/g, ""));
+  const ranges = manuscriptFragmentRanges(text, ["「𠮷が", "ABC、小っ。」", "旧かな。"]);
+  for (const glyph of layout.glyphs) {
+    const expected = ranges.findIndex((range) => glyph.index >= range.start && glyph.index < range.end);
+    assert.equal(fragmentAt(layout, ranges, { x: glyph.x + glyph.advance / 2, y: glyph.y + 14 }), expected);
+  }
+  assert.equal(fragmentAt(layout, ranges, { x: 0, y: 0 }), -1);
 });
 
 test("Aozora cleanup removes readings and resolves known characters without silently replacing unknown ones", () => {
