@@ -14,7 +14,7 @@
     "test": "node --experimental-strip-types --test tests/*.test.ts"
   },
   "dependencies": {
-    "next": "^16.2.2",
+    "next": "^16.4.4",
     "phaser": "4.2.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
@@ -28,7 +28,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "eslint": "^9.39.1",
-    "eslint-config-next": "^16.2.2",
+    "eslint-config-next": "^16.4.4",
     "fontkit": "2.0.4",
     "tailwindcss": "^4.2.2",
     "typescript": "^5.9.3"
