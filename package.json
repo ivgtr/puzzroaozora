@@ -11,10 +11,10 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test tests/*.test.ts"
+    "test": "node --experimental-strip-types --test tests/*.test.ts tests/*.test.mjs"
   },
   "dependencies": {
-    "next": "^16.2.2",
+    "next": "^16.4.4",
     "phaser": "4.2.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
@@ -28,9 +28,33 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "eslint": "^9.39.1",
-    "eslint-config-next": "^16.2.2",
+    "eslint-config-next": "^16.4.4",
     "fontkit": "2.0.4",
+    "minimatch-patched": "npm:minimatch@^11.0.4",
     "tailwindcss": "^4.2.2",
     "typescript": "^5.9.3"
+  },
+  "overrides": {
+    "eslint": {
+      "minimatch": "file:./vendor/minimatch-compat"
+    },
+    "@eslint/config-array": {
+      "minimatch": "file:./vendor/minimatch-compat"
+    },
+    "@eslint/eslintrc": {
+      "minimatch": "file:./vendor/minimatch-compat"
+    },
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "file:./vendor/minimatch-compat"
+    },
+    "eslint-plugin-import": {
+      "minimatch": "file:./vendor/minimatch-compat"
+    },
+    "eslint-plugin-jsx-a11y": {
+      "minimatch": "file:./vendor/minimatch-compat"
+    },
+    "eslint-plugin-react": {
+      "minimatch": "file:./vendor/minimatch-compat"
+    }
   }
 }
